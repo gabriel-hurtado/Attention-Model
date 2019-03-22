@@ -6,6 +6,47 @@ from transformer.utils import clones
 from transformer.layers import ResidualConnection
 
 
+class Encoder(nn.Module):
+    """
+    Implementation of the Encoder of the Transformer model.
+
+    Constituted of a stack of N identical layers.
+    """
+
+    def __init__(self, layer: nn.Module, N:int):
+        """
+        Constructor for the global Encoder.
+
+        :param layer: layer type to use.
+
+        :param N: Number of layers to use.
+
+        """
+        # call base constructor
+        super(Encoder, self).__init__()
+
+        self.layers = clones(layer, N)
+
+    def forward(self, x:Tensor, mask=None, verbose=False) -> Tensor:
+        """
+        Implements the forward pass: Relays the output of layer i to layer i+1.
+        :param x: Input Tensor, should be 3-dimensional: (batch_size, seq_length, d_model).
+                Should represent the input sentences.
+        :param mask: Mask to use in the layers. Optional.
+
+        :param verbose: Whether to add debug/info messages or not.
+
+        :return: Output tensor, should be of same shape as input.
+
+        """
+        for i, layer in enumerate(self.layers):
+            if verbose:
+                print('Going into layer {}'.format(i+1))
+            x = layer(x, mask)
+
+        return x
+
+
 class EncoderLayer(nn.Module):
     """
     Implements one Encoder layer. The actual Encoder is a stack of N of these layers.
@@ -36,6 +77,7 @@ class EncoderLayer(nn.Module):
         # get self-attn & feed-forward sub-modules
         self.self_attn = self_attn
         self.feed_forward = feed_forward
+        self.size = size
 
         self.sublayer = clones(ResidualConnection(size, dropout), 2)
 
@@ -64,8 +106,10 @@ if __name__ == '__main__':
     enc_layer = EncoderLayer(size=512, self_attn=MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64, dropout=0.1),
                              feed_forward=PositionwiseFeedForward(d_model=512, d_ff=2048, dropout=0.1), dropout=0.1)
 
+    encoder = Encoder(layer=enc_layer, N=6)
     x = torch.ones((64, 10, 512))
 
-    out = enc_layer(x)
+    # out = enc_layer(x)
+    out = encoder(x, None, True)
 
     print(out.shape)
