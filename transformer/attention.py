@@ -150,7 +150,7 @@ class MultiHeadAttention(nn.Module):
         self.fc = nn.Linear(n_head * d_v, d_model)
         # nn.init.xavier_normal_(self.fc.weight)
 
-    def forward(self, queries, keys, values, mask=None) -> Tensor:
+    def forward(self, queries: Tensor, keys: Tensor, values: Tensor, mask=None) -> Tensor:
         """
         Implements the forward pass of the ``MultiHeadAttention`` class.
 
