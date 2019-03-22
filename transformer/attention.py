@@ -44,7 +44,7 @@ class ScaledDotProductAttention(nn.Module):
         # instantiate softmax layer, along last dimension
         self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, queries: Tensor, keys: Tensor, values: Tensor, mask=None) -> tuple:
+    def forward(self, queries: Tensor, keys: Tensor, values: Tensor, mask=None) -> Tensor:
         """
         Implements the forward pass of the ``ScaledDotProductAttention`` class.
 
@@ -83,7 +83,7 @@ class ScaledDotProductAttention(nn.Module):
         # apply the weights on the values
         output = torch.matmul(attn_weights, values)
 
-        return output, attn_weights
+        return output
 
 
 class MultiHeadAttention(nn.Module):
@@ -99,9 +99,9 @@ class MultiHeadAttention(nn.Module):
 
         Where:\ head_i = Attention(Q \\cdot W^Q_i, K \\cdot W^K_i, V \\cdot W^V_i)
 
-        W^Q_i, W^K_i \\in \\mathbb{R}^{d_{model} × d_k}
+        W^Q_i, W^K_i \\in \\mathbb{R}^{d_{model} x d_k}
 
-        W^V_i \\in \\mathbb{R}^{d_{model} × d_v}
+        W^V_i \\in \\mathbb{R}^{d_{model} x d_v}
 
     The W matrices are linear projections.
 
@@ -150,7 +150,7 @@ class MultiHeadAttention(nn.Module):
         self.fc = nn.Linear(n_head * d_v, d_model)
         # nn.init.xavier_normal_(self.fc.weight)
 
-    def forward(self, queries, keys, values, mask=None) -> tuple:
+    def forward(self, queries, keys, values, mask=None) -> Tensor:
         """
         Implements the forward pass of the ``MultiHeadAttention`` class.
 
@@ -184,14 +184,14 @@ class MultiHeadAttention(nn.Module):
                                  for l, x in zip((self.w_qs, self.w_ks, self.w_vs), (queries, keys, values))]
 
         # 2) Apply attention on all the projected vectors in batch.
-        x, attn = self.attention(queries, keys, values, mask=mask)
+        x = self.attention(queries, keys, values, mask=mask)
 
         # 3) Concat using a view.
         x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.n_head * self.d_k)
 
         output = self.fc(x)
 
-        return output, attn
+        return output
 
 
 if __name__ == '__main__':
