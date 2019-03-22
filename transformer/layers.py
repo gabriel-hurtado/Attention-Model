@@ -40,7 +40,7 @@ class PositionwiseFeedForward(nn.Module):
         # second layer
         self.linear_2 = nn.Linear(d_ff, d_model)
 
-    def forward(self, x:Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Forward pass of the FFN.
 
@@ -107,7 +107,7 @@ class ResidualConnection(nn.Module):
     Dropout is applied to the output of the sublayer before it is added to the sub-layer input and normalized.
 
     """
-    def __init__(self, size:int, dropout: float):
+    def __init__(self, size: int, dropout: float):
         """
         Constructor for the ``ResidualConnection`` class.
 
@@ -124,7 +124,7 @@ class ResidualConnection(nn.Module):
         # dropout layer
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, sublayer: nn.Module) -> Tensor:
+    def forward(self, x: Tensor, sublayer: nn.Module) -> Tensor:
         """
         Apply the residual connection to any ``sublayer`` with the same size.
 
