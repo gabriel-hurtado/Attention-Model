@@ -35,3 +35,11 @@ venv.bak/
 ```bash
 pip install -r requirements.txt
 ```
+
+## Running tests
+
+To run all tests with test discovery:
+
+```bash
+python -m unittest
+```
