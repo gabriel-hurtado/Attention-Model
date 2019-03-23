@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
+from attention import MultiHeadAttention
 
 
 class PositionwiseFeedForward(nn.Module):
@@ -147,8 +148,6 @@ if __name__ == '__main__':
     ffn = PositionwiseFeedForward(d_model=dim, d_ff=2048, dropout=0.1)
 
     ffn_output = ffn(x)
-
-    from transformer.attention import MultiHeadAttention
 
     multi_attention = MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64)
 

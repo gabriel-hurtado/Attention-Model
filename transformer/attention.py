@@ -169,7 +169,6 @@ class MultiHeadAttention(nn.Module):
         :return:
 
             - Output: Results of attention weights applied to the values. Shape should be (batch_size, seq_length, d_model)
-            - attn_weights: Attention weights. Shape should be (batch_size, n_head, seq_length, seq_length)
 
         """
 
@@ -206,6 +205,5 @@ if __name__ == '__main__':
 
     multi_attention = MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64)
 
-    output, attn_weights = multi_attention(queries=queries, keys=keys, values=values)
+    output = multi_attention(queries=queries, keys=keys, values=values)
     print(output.shape)
-    print(attn_weights.shape)
