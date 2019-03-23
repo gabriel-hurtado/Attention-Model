@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from utils import clones, BColors, subsequent_mask
-from layers import PositionwiseFeedForward, LayerNormalization, ResidualConnection
-from attention import ScaledDotProductAttention, MultiHeadAttention
+from transformer.attention import MultiHeadAttention
+from transformer.layers import PositionwiseFeedForward, LayerNormalization, ResidualConnection
+from transformer.utils import clones, BColors, subsequent_mask
 
 
 class Decoder(nn.Module):
@@ -25,7 +25,8 @@ class Decoder(nn.Module):
         self.layers = clones(layer, N)
         self.norm = LayerNormalization(layer.size)
 
-    def forward(self, x: Tensor, memory: Tensor, self_mask: Tensor, memory_mask: None, verbose=False) -> Tensor:
+    def forward(self, x: Tensor, memory: Tensor, self_mask: Tensor, memory_mask: None,
+                verbose=False) -> Tensor:
         """
         Forward pass: Relays the output of layer i to layer i+1
         :param x: input Tensor of decoder
@@ -59,7 +60,8 @@ class DecoderLayer(nn.Module):
             v -----------> |           v ------------> |            v -------------> |
     """
 
-    def __init__(self, size: int, self_attn: nn.Module, memory_attn: nn.Module, feed_forward: nn.Module, dropout: float):
+    def __init__(self, size: int, self_attn: nn.Module, memory_attn: nn.Module,
+                 feed_forward: nn.Module, dropout: float):
         """
         Constructor for the ``DecoderLayer`` class.
         :param size: Input size
@@ -98,7 +100,6 @@ class DecoderLayer(nn.Module):
 
 
 if __name__ == '__main__':
-
     # initialization parameters
     batch_size = 64
     sequence_length = 10
@@ -108,9 +109,12 @@ if __name__ == '__main__':
 
     # initialization decoder
     decoder_layer = DecoderLayer(size=input_size,
-                                 self_attn=MultiHeadAttention(n_head=8, d_model=d_model, d_k=d_k, d_v=d_v, dropout=0.1),
-                                 memory_attn=MultiHeadAttention(n_head=8, d_model=d_model, d_k=d_k, d_v=d_v, dropout=0.1),
-                                 feed_forward=PositionwiseFeedForward(d_model=d_model, d_ff=d_ff, dropout=0.1),
+                                 self_attn=MultiHeadAttention(n_head=8, d_model=d_model,
+                                                              d_k=d_k, d_v=d_v, dropout=0.1),
+                                 memory_attn=MultiHeadAttention(n_head=8, d_model=d_model,
+                                                                d_k=d_k, d_v=d_v, dropout=0.1),
+                                 feed_forward=PositionwiseFeedForward(d_model=d_model,
+                                                                      d_ff=d_ff, dropout=0.1),
                                  dropout=0.1)
 
     decoder = Decoder(layer=decoder_layer, N=N_decoder_layer)
@@ -133,7 +137,3 @@ if __name__ == '__main__':
 
     print(out.shape)
     print(f'{BColors.OKGREEN}-Decoder forward() unit tests: passed')
-
-
-
-

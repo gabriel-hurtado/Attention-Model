@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from utils import clones
-from layers import PositionwiseFeedForward, LayerNormalization, ResidualConnection
-from attention import ScaledDotProductAttention, MultiHeadAttention
+from transformer.attention import MultiHeadAttention
+from transformer.layers import PositionwiseFeedForward, ResidualConnection
+from transformer.utils import clones
 
 
 class Encoder(nn.Module):
@@ -14,7 +14,7 @@ class Encoder(nn.Module):
     Constituted of a stack of N identical layers.
     """
 
-    def __init__(self, layer: nn.Module, N:int):
+    def __init__(self, layer: nn.Module, N: int):
         """
         Constructor for the global Encoder.
 
@@ -28,7 +28,7 @@ class Encoder(nn.Module):
 
         self.layers = clones(layer, N)
 
-    def forward(self, x:Tensor, mask=None, verbose=False) -> Tensor:
+    def forward(self, x: Tensor, mask=None, verbose=False) -> Tensor:
         """
         Implements the forward pass: Relays the output of layer i to layer i+1.
         :param x: Input Tensor, should be 3-dimensional: (batch_size, seq_length, d_model).
@@ -42,7 +42,7 @@ class Encoder(nn.Module):
         """
         for i, layer in enumerate(self.layers):
             if verbose:
-                print('Going into layer {}'.format(i+1))
+                print('Going into layer {}'.format(i + 1))
             x = layer(x, mask)
 
         return x
@@ -59,7 +59,8 @@ class EncoderLayer(nn.Module):
             v -------------------------> |                v ---------------- |
     """
 
-    def __init__(self, size:int, self_attn: nn.Module, feed_forward: nn.Module, dropout: float):
+    def __init__(self, size: int, self_attn: nn.Module, feed_forward: nn.Module,
+                 dropout: float):
         """
         Constructor for the ``EncoderLayer`` class.
 
@@ -100,9 +101,11 @@ class EncoderLayer(nn.Module):
 
 
 if __name__ == '__main__':
-
-    enc_layer = EncoderLayer(size=512, self_attn=MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64, dropout=0.1),
-                             feed_forward=PositionwiseFeedForward(d_model=512, d_ff=2048, dropout=0.1), dropout=0.1)
+    enc_layer = EncoderLayer(size=512,
+                             self_attn=MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64,
+                                                          dropout=0.1),
+                             feed_forward=PositionwiseFeedForward(d_model=512, d_ff=2048,
+                                                                  dropout=0.1), dropout=0.1)
 
     encoder = Encoder(layer=enc_layer, N=6)
     x = torch.ones((64, 10, 512))
