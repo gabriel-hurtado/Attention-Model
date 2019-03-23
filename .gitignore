@@ -40,7 +40,6 @@ Temporary Items
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
-.idea/
 
 # Generated files
 .idea/**/contentModel.xml
@@ -257,3 +256,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/macos,python,windows,pycharm
+.idea/misc.xml
