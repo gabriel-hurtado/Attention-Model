@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from transformer.utils import clones
-from transformer.layers import ResidualConnection
+from utils import clones
+from layers import PositionwiseFeedForward, LayerNormalization, ResidualConnection
+from attention import ScaledDotProductAttention, MultiHeadAttention
 
 
 class Encoder(nn.Module):
@@ -99,9 +100,6 @@ class EncoderLayer(nn.Module):
 
 
 if __name__ == '__main__':
-
-    from transformer.attention import MultiHeadAttention
-    from transformer.layers import PositionwiseFeedForward
 
     enc_layer = EncoderLayer(size=512, self_attn=MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64, dropout=0.1),
                              feed_forward=PositionwiseFeedForward(d_model=512, d_ff=2048, dropout=0.1), dropout=0.1)
