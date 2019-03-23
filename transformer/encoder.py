@@ -14,21 +14,21 @@ class Encoder(nn.Module):
     Constituted of a stack of N identical layers.
     """
 
-    def __init__(self, layer: nn.Module, N:int):
+    def __init__(self, layer: nn.Module, n_layers: int):
         """
         Constructor for the global Encoder.
 
         :param layer: layer type to use.
 
-        :param N: Number of layers to use.
+        :param n_layers: Number of layers to use.
 
         """
         # call base constructor
         super(Encoder, self).__init__()
 
-        self.layers = clones(layer, N)
+        self.layers = clones(layer, n_layers)
 
-    def forward(self, x:Tensor, mask=None, verbose=False) -> Tensor:
+    def forward(self, x: Tensor, mask=None, verbose=False) -> Tensor:
         """
         Implements the forward pass: Relays the output of layer i to layer i+1.
         :param x: Input Tensor, should be 3-dimensional: (batch_size, seq_length, d_model).
@@ -42,7 +42,7 @@ class Encoder(nn.Module):
         """
         for i, layer in enumerate(self.layers):
             if verbose:
-                print('Going into layer {}'.format(i+1))
+                print('Going into layer {}'.format(i + 1))
             x = layer(x, mask)
 
         return x
@@ -59,13 +59,13 @@ class EncoderLayer(nn.Module):
             v -------------------------> |                v ---------------- |
     """
 
-    def __init__(self, size:int, self_attn: nn.Module, feed_forward: nn.Module, dropout: float):
+    def __init__(self, size: int, self_attention: nn.Module, feed_forward: nn.Module, dropout: float):
         """
         Constructor for the ``EncoderLayer`` class.
 
         :param size: Input size.
 
-        :param self_attn: Class used for the self-attention part of the layer.
+        :param self_attention: Class used for the self-attention part of the layer.
 
         :param feed_forward: Class used for the feed-forward part of the layer.
 
@@ -76,7 +76,7 @@ class EncoderLayer(nn.Module):
         super(EncoderLayer, self).__init__()
 
         # get self-attn & feed-forward sub-modules
-        self.self_attn = self_attn
+        self.self_attention = self_attention
         self.feed_forward = feed_forward
         self.size = size
 
@@ -94,17 +94,17 @@ class EncoderLayer(nn.Module):
         :return: Output of the EncoderLayer, should be of the same shape as the input.
 
         """
-        attn_out = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
+        attention_out = self.sublayer[0](x, lambda x: self.self_attention(x, x, x, mask))
 
-        return self.sublayer[1](attn_out, self.feed_forward)
+        return self.sublayer[1](attention_out, self.feed_forward)
 
 
 if __name__ == '__main__':
-
-    enc_layer = EncoderLayer(size=512, self_attn=MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64, dropout=0.1),
+    enc_layer = EncoderLayer(size=512,
+                             self_attention=MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64, dropout=0.1),
                              feed_forward=PositionwiseFeedForward(d_model=512, d_ff=2048, dropout=0.1), dropout=0.1)
 
-    encoder = Encoder(layer=enc_layer, N=6)
+    encoder = Encoder(layer=enc_layer, n_layers=6)
     x = torch.ones((64, 10, 512))
 
     # out = enc_layer(x)

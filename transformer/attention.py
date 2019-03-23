@@ -76,14 +76,12 @@ class ScaledDotProductAttention(nn.Module):
             scores = scores.masked_fill(mask, -np.inf)
 
         # get attn weights
-        attn_weights = self.softmax(scores)
+        attention_weights = self.softmax(scores)
 
-        attn_weights = self.dropout(attn_weights)
+        attention_weights = self.dropout(attention_weights)
 
         # apply the weights on the values
-        output = torch.matmul(attn_weights, values)
-
-        return output
+        return torch.matmul(attention_weights, values)
 
 
 class MultiHeadAttention(nn.Module):
@@ -176,21 +174,19 @@ class MultiHeadAttention(nn.Module):
             # Same mask applied to all heads.
             mask = mask.unsqueeze(1)
 
-        nbatches = queries.shape[0]
+        n_batches = queries.shape[0]
 
         # 1) Do all the linear projections in batch from d_model => h x d_k
-        queries, keys, values = [l(x).view(nbatches, -1, self.n_head, self.d_k).transpose(1, 2)
+        queries, keys, values = [l(x).view(n_batches, -1, self.n_head, self.d_k).transpose(1, 2)
                                  for l, x in zip((self.w_qs, self.w_ks, self.w_vs), (queries, keys, values))]
 
         # 2) Apply attention on all the projected vectors in batch.
         x = self.attention(queries, keys, values, mask=mask)
 
         # 3) Concat using a view.
-        x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.n_head * self.d_k)
+        x = x.transpose(1, 2).contiguous().view(n_batches, -1, self.n_head * self.d_k)
 
-        output = self.fc(x)
-
-        return output
+        return self.fc(x)
 
 
 if __name__ == '__main__':
