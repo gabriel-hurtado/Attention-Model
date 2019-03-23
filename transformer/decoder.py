@@ -123,7 +123,7 @@ if __name__ == '__main__':
     decoder_mask = subsequent_mask(sequence_length)
 
     # forward pass with fool input and memory (same here)
-    out = decoder(x, x, decoder_mask, None)
+    out = decoder(x, memory, decoder_mask, None)
 
     # forward unit test
     assert out.shape == x.shape
