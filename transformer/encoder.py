@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
+from attention import MultiHeadAttention
+from layers import PositionwiseFeedForward, ResidualConnection
 from utils import clones
-from layers import PositionwiseFeedForward, LayerNormalization, ResidualConnection
-from attention import ScaledDotProductAttention, MultiHeadAttention
 
 
 class Encoder(nn.Module):
