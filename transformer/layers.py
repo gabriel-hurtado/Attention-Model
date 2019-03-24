@@ -3,6 +3,8 @@ import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
 
+from transformer.attention import MultiHeadAttention
+
 
 class PositionwiseFeedForward(nn.Module):
     """
@@ -40,7 +42,7 @@ class PositionwiseFeedForward(nn.Module):
         # second layer
         self.linear_2 = nn.Linear(d_ff, d_model)
 
-    def forward(self, x:Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Forward pass of the FFN.
 
@@ -107,7 +109,7 @@ class ResidualConnection(nn.Module):
     Dropout is applied to the output of the sublayer before it is added to the sub-layer input and normalized.
 
     """
-    def __init__(self, size:int, dropout: float):
+    def __init__(self, size: int, dropout: float):
         """
         Constructor for the ``ResidualConnection`` class.
 
@@ -124,7 +126,7 @@ class ResidualConnection(nn.Module):
         # dropout layer
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, sublayer: nn.Module) -> Tensor:
+    def forward(self, x: Tensor, sublayer: nn.Module) -> Tensor:
         """
         Apply the residual connection to any ``sublayer`` with the same size.
 
@@ -147,8 +149,6 @@ if __name__ == '__main__':
     ffn = PositionwiseFeedForward(d_model=dim, d_ff=2048, dropout=0.1)
 
     ffn_output = ffn(x)
-
-    from transformer.attention import MultiHeadAttention
 
     multi_attention = MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64)
 
