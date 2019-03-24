@@ -1,10 +1,8 @@
-import torch
 import torch.nn as nn
 from torch import Tensor
 
-from transformer.attention import MultiHeadAttention
-from transformer.layers import PositionwiseFeedForward, LayerNormalization, ResidualConnection
-from transformer.utils import clones, BColors, subsequent_mask
+from transformer.layers import LayerNormalization, ResidualConnection
+from transformer.utils import clone
 
 
 class Decoder(nn.Module):
@@ -18,11 +16,10 @@ class Decoder(nn.Module):
         """
         Constructor for the global Decode
         :param layer: layer module to use.
-        :param N: Number of decoder layers to use.
+        :param N: number of decoder layers to use.
         """
-
-        super(Decoder, self).__init__()
-        self.layers = clones(layer, N)
+        super().__init__()
+        self.layers = clone(layer, N)
         self.norm = LayerNormalization(layer.size)
 
     def forward(self, x: Tensor, memory: Tensor, self_mask: Tensor, memory_mask: None,
@@ -36,12 +33,11 @@ class Decoder(nn.Module):
                 on the known outputs at positions less than i.
         :param memory_mask: Mask to be used in the memory-attention sub-module. Optional.
         :param verbose: Whether to add debug/info messages or not.
-        :return:
         """
 
         for i, layer in enumerate(self.layers):
             if verbose:
-                print(f'Going into layer {i}')
+                print(f"Going into layer {i}")
             x = layer(x, memory, self_mask, memory_mask)
         return self.norm(x)
 
@@ -76,7 +72,7 @@ class DecoderLayer(nn.Module):
         self.self_attn = self_attn
         self.memory_attn = memory_attn
         self.feed_forward = feed_forward
-        self.sublayer = clones(ResidualConnection(size, dropout), 3)
+        self.sublayer = clone(ResidualConnection(size, dropout), 3)
 
     def forward(self, x: Tensor, memory: Tensor, self_mask: Tensor, memory_mask=None) -> Tensor:
         """
@@ -97,43 +93,3 @@ class DecoderLayer(nn.Module):
         x = self.sublayer[1](x, lambda x: self.memory_attn(x, memory, memory, memory_mask))
         # final feed forward with residual & norm
         return self.sublayer[2](x, self.feed_forward)
-
-
-if __name__ == '__main__':
-    # initialization parameters
-    batch_size = 64
-    sequence_length = 10
-    d_k = d_v = d_model = input_size = 512
-    d_ff = 2048
-    N_decoder_layer = 6
-
-    # initialization decoder
-    decoder_layer = DecoderLayer(size=input_size,
-                                 self_attn=MultiHeadAttention(n_head=8, d_model=d_model,
-                                                              d_k=d_k, d_v=d_v, dropout=0.1),
-                                 memory_attn=MultiHeadAttention(n_head=8, d_model=d_model,
-                                                                d_k=d_k, d_v=d_v, dropout=0.1),
-                                 feed_forward=PositionwiseFeedForward(d_model=d_model,
-                                                                      d_ff=d_ff, dropout=0.1),
-                                 dropout=0.1)
-
-    decoder = Decoder(layer=decoder_layer, N=N_decoder_layer)
-
-    # initialization input and memory
-    x = torch.ones((batch_size, sequence_length, input_size))
-    memory = torch.ones((batch_size, sequence_length, input_size))
-
-    # subsequent mask: mask all words > i
-    decoder_mask = subsequent_mask(sequence_length)
-
-    # forward pass with fool input and memory (same here)
-    out = decoder(x, memory, decoder_mask, None)
-
-    # forward unit test
-    assert out.shape == x.shape
-    assert isinstance(out, Tensor)
-    assert out.shape == memory.shape
-    assert x.shape == memory.shape
-
-    print(out.shape)
-    print(f'{BColors.OKGREEN}-Decoder forward() unit tests: passed')

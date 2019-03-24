@@ -4,7 +4,7 @@ from torch import Tensor
 
 from transformer.attention import MultiHeadAttention
 from transformer.layers import PositionwiseFeedForward, ResidualConnection
-from transformer.utils import clones
+from transformer.utils import clone
 
 
 class Encoder(nn.Module):
@@ -26,7 +26,7 @@ class Encoder(nn.Module):
         # call base constructor
         super(Encoder, self).__init__()
 
-        self.layers = clones(layer, N)
+        self.layers = clone(layer, N)
 
     def forward(self, x: Tensor, mask=None, verbose=False) -> Tensor:
         """
@@ -73,15 +73,14 @@ class EncoderLayer(nn.Module):
         :param dropout: dropout probability
 
         """
-        # call base constructor
-        super(EncoderLayer, self).__init__()
+        super().__init__()
 
         # get self-attn & feed-forward sub-modules
         self.self_attn = self_attn
         self.feed_forward = feed_forward
         self.size = size
 
-        self.sublayer = clones(ResidualConnection(size, dropout), 2)
+        self.sublayer = clone(ResidualConnection(size, dropout), 2)
 
     def forward(self, x: Tensor, mask=None) -> Tensor:
         """
@@ -110,7 +109,6 @@ if __name__ == '__main__':
     encoder = Encoder(layer=enc_layer, N=6)
     x = torch.ones((64, 10, 512))
 
-    # out = enc_layer(x)
     out = encoder(x, None, True)
 
     print(out.shape)

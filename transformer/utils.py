@@ -1,14 +1,15 @@
 import copy
-import torch
+
 import numpy as np
+import torch
 import torch.nn as nn
 
 
-def clones(module, N):
+def clone(module, N) -> nn.ModuleList:
     """
-    Produce ``N`` identical copies of ``module`` and return them as a ``nn.ModuleList``.
+    Produces ``N`` identical copies of ``module`` and returns them as a ``nn.ModuleList``.
     """
-    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+    return nn.ModuleList((copy.deepcopy(module),) * N)
 
 
 def subsequent_mask(size):
@@ -20,7 +21,6 @@ def subsequent_mask(size):
     attn_shape = (1, size, size)
     subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
     return torch.from_numpy(subsequent_mask) == 0
-
 
 
 class BColors:
