@@ -19,6 +19,7 @@ class PositionwiseFeedForward(nn.Module):
 
     """
     "Implements FFN equation."
+
     def __init__(self, d_model: int, d_ff: int, dropout=0.1):
         """
         Constructor for the 2-layers FFN.
@@ -66,6 +67,7 @@ class LayerNormalization(nn.Module):
 
     Where a, b are learnable parameters,  \sigma & \mu are the standard deviation & mean of x.
     """
+
     def __init__(self, size: int, eps=1e-6):
         """
         Constructor for the ``LayerNormalization`` class.
@@ -109,6 +111,7 @@ class ResidualConnection(nn.Module):
     Dropout is applied to the output of the sublayer before it is added to the sub-layer input and normalized.
 
     """
+
     def __init__(self, size: int, dropout: float):
         """
         Constructor for the ``ResidualConnection`` class.
