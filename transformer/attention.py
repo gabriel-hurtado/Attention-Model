@@ -76,14 +76,12 @@ class ScaledDotProductAttention(nn.Module):
             scores = scores.masked_fill(mask, -np.inf)
 
         # get attn weights
-        attn_weights = self.softmax(scores)
+        attention_weights = self.softmax(scores)
 
-        attn_weights = self.dropout(attn_weights)
+        attention_weights = self.dropout(attention_weights)
 
         # apply the weights on the values
-        output = torch.matmul(attn_weights, values)
-
-        return output
+        return torch.matmul(attention_weights, values)
 
 
 class MultiHeadAttention(nn.Module):
@@ -150,7 +148,7 @@ class MultiHeadAttention(nn.Module):
         self.fc = nn.Linear(n_head * d_v, d_model)
         # nn.init.xavier_normal_(self.fc.weight)
 
-    def forward(self, queries, keys, values, mask=None) -> Tensor:
+    def forward(self, queries: Tensor, keys: Tensor, values: Tensor, mask=None) -> Tensor:
         """
         Implements the forward pass of the ``MultiHeadAttention`` class.
 
@@ -169,7 +167,6 @@ class MultiHeadAttention(nn.Module):
         :return:
 
             - Output: Results of attention weights applied to the values. Shape should be (batch_size, seq_length, d_model)
-            - attn_weights: Attention weights. Shape should be (batch_size, n_head, seq_length, seq_length)
 
         """
 
@@ -177,21 +174,19 @@ class MultiHeadAttention(nn.Module):
             # Same mask applied to all heads.
             mask = mask.unsqueeze(1)
 
-        nbatches = queries.shape[0]
+        n_batches = queries.shape[0]
 
         # 1) Do all the linear projections in batch from d_model => h x d_k
-        queries, keys, values = [l(x).view(nbatches, -1, self.n_head, self.d_k).transpose(1, 2)
+        queries, keys, values = [l(x).view(n_batches, -1, self.n_head, self.d_k).transpose(1, 2)
                                  for l, x in zip((self.w_qs, self.w_ks, self.w_vs), (queries, keys, values))]
 
         # 2) Apply attention on all the projected vectors in batch.
         x = self.attention(queries, keys, values, mask=mask)
 
         # 3) Concat using a view.
-        x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.n_head * self.d_k)
+        x = x.transpose(1, 2).contiguous().view(n_batches, -1, self.n_head * self.d_k)
 
-        output = self.fc(x)
-
-        return output
+        return self.fc(x)
 
 
 if __name__ == '__main__':
@@ -206,6 +201,5 @@ if __name__ == '__main__':
 
     multi_attention = MultiHeadAttention(n_head=8, d_model=512, d_k=64, d_v=64)
 
-    output, attn_weights = multi_attention(queries=queries, keys=keys, values=values)
+    output = multi_attention(queries=queries, keys=keys, values=values)
     print(output.shape)
-    print(attn_weights.shape)
