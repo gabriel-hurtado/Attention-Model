@@ -1,8 +1,8 @@
 import torch.nn as nn
 from torch import Tensor
 
-from layers import ResidualConnection
-from utils import clones
+from transformer.layers import ResidualConnection
+from transformer.utils import clone
 
 
 class Encoder(nn.Module):
@@ -21,7 +21,7 @@ class Encoder(nn.Module):
         """
         # call base constructor
         super().__init__()
-        self.layers = clones(layer, n_layers)
+        self.layers = clone(layer, n_layers)
 
     def forward(self, x: Tensor, mask=None, verbose=False) -> Tensor:
         """
@@ -62,7 +62,6 @@ class EncoderLayer(nn.Module):
         :param feed_forward: Class used for the feed-forward part of the layer.
         :param dropout: Dropout probability.
         """
-        # call base constructor
         super().__init__()
 
         # get self-attn & feed-forward sub-modules
@@ -70,7 +69,7 @@ class EncoderLayer(nn.Module):
         self.feed_forward = feed_forward
         self.size = size
 
-        self.sublayer = clones(ResidualConnection(size, dropout), 2)
+        self.sublayer = clone(ResidualConnection(size, dropout), 2)
 
     def forward(self, x: Tensor, mask=None) -> Tensor:
         """

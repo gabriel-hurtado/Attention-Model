@@ -2,9 +2,9 @@ from unittest import TestCase
 
 import torch
 
-from attention import MultiHeadAttention
-from encoder import EncoderLayer, Encoder
-from layers import PositionwiseFeedForward
+from transformer.attention import MultiHeadAttention
+from transformer.encoder import EncoderLayer, Encoder
+from transformer.layers import PositionwiseFeedForward
 
 
 class TestEncoder(TestCase):
