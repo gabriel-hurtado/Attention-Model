@@ -9,7 +9,7 @@ class Embeddings(nn.Module):
         Creates a word embeddings.
 
         Note that for the transformer model, the input embeddings
-        is contrained to using the same weight matrix as the output transformation.
+        is constrained to using the same weight matrix as the output transformation.
 
         :param d_model: The dimension of the output to use.
         :param vocab_size: The size of the vocabulary.
