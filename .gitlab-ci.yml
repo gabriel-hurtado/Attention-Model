@@ -31,6 +31,7 @@ unittest:
   only:
   - master
   - develop
+  - merge_requests
 
 # pep8 runs different tests for different Python versions
 stylecheck:
@@ -38,14 +39,23 @@ stylecheck:
   script:
     - pip install pylint
     - pylint -d all ./*
+  allow_failure: true
   only:
   - master
   - develop
+  - merge_requests
 
 code_quality:
   image: docker:stable
+  stage: test
   variables:
     DOCKER_DRIVER: overlay2
+  before_script:
+  - echo "Do nothing"
+  cache:
+    key: "code_quality"
+  only:
+  - merge_requests
   allow_failure: true
   services:
     - docker:stable-dind
