@@ -27,7 +27,11 @@ before_script:
 unittest:
   stage: test
   script:
-  - python -m unittest
+  - pip install unittest-xml-reporting
+  - python -m xmlrunner -o junit-reports
+  artifacts:
+    reports:
+      junit: junit-reports/TEST-*.xml
   only:
   - master
   - develop
