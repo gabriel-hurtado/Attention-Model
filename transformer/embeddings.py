@@ -98,20 +98,4 @@ class PositionalEncoding(nn.Module):
         :return: Sum of embeddings and positional encodings (with dropout applied). Should be the same shape as x.
         """
         # add positional encoding (up to the sequence length) to embeddings
-        embeddings += self.pos_encoding[:, :embeddings.size(1)]
-
-        return self.dropout(embeddings)
-
-
-if __name__ =='__main__':
-    batch_size = 64
-    sequence_length = 10
-    d_model = 512
-
-    pos_encoding = PositionalEncoding(d_model, 0.1)
-
-    x = torch.ones((batch_size, sequence_length, d_model))
-
-    x = pos_encoding(x)
-
-    print(x.shape)
+        return self.dropout(embeddings + self.pos_encoding[:, :embeddings.size(1)])
