@@ -1,7 +1,7 @@
 import torch.nn as nn
 from torch import Tensor
 
-from transformer.layers import ResidualConnection
+from transformer.layers import ResidualConnection, LayerNormalization
 from transformer.utils import clone
 
 
@@ -20,8 +20,10 @@ class Encoder(nn.Module):
         :param n_layers: Number of layers to use.
         """
         # call base constructor
-        super().__init__()
+        super(Encoder, self).__init__()
         self.layers = clone(layer, n_layers)
+
+        self.norm = LayerNormalization(layer.size)
 
     def forward(self, x: Tensor, mask=None, verbose=False) -> Tensor:
         """
@@ -38,7 +40,7 @@ class Encoder(nn.Module):
                 print('Going into layer {}'.format(i + 1))
             x = layer(x, mask)
 
-        return x
+        return self.norm(x)
 
 
 class EncoderLayer(nn.Module):
@@ -83,6 +85,8 @@ class EncoderLayer(nn.Module):
         :return: Output of the EncoderLayer, should be of the same shape as the input.
 
         """
+        # feed input x as key, query, value in self-attention
         attention_out = self.sublayer[0](x, lambda x: self.self_attention(x, x, x, mask))
 
+        # go through feed forward sublayer + residual connection
         return self.sublayer[1](attention_out, self.feed_forward)
