@@ -1,4 +1,6 @@
+import torch
 import torch.nn as nn
+from transformer.utils import subsequent_mask
 from transformer.encoder import Encoder, EncoderLayer
 from transformer.decoder import Decoder, DecoderLayer
 from transformer.attention import MultiHeadAttention
@@ -91,5 +93,38 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self):
-        pass
+    def forward(self, src_sequences, src_masks, tgt_sequences, tgt_masks):
+        """
+        DISCLAIMER: There are missing parts / bugs in this forward for certain.
+        Have to identify & fix them.
+
+        :param src_sequences: Batch of input sentences. Should be of shape (batch_size, in_seq_len).
+
+        :param  src_masks: Mask, hiding the padding in the input batch. Should be same shape as src_sequences.
+
+        :param tgt_sequences: Batch of output sentences. Should be of shape (batch_size, out_seq_len).
+
+        :param tgt_masks: Mask, hiding the padding in the output batch. TODO: Shape>
+
+        :return: Logits, of shape (batch_size, out_seq_len, d_model)
+        """
+
+        # 1. embed the input batch
+        src_sequences = self.src_embedings(src_sequences.type(torch.LongTensor))
+
+        # 2. encoder stack
+        encoder_output = self.encoder(src_sequences.type(torch.FloatTensor))
+
+        # 3. get subsequent mask to hide subsequent positions in the decoder.
+        self_mask = subsequent_mask(tgt_sequences.shape[1])
+
+        # 4. embed the output batch
+        tgt_sequences = self.tgt_embedings(tgt_sequences.type(torch.LongTensor))
+
+        # 4. decoder stack
+        decoder_output = self.decoder(x=tgt_sequences.type(torch.FloatTensor), memory=encoder_output, self_mask=self_mask, memory_mask=None)
+
+        # 5. classifier
+        logits = self.classifier(decoder_output)
+
+        return logits
