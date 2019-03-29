@@ -1,3 +1,4 @@
+import torch
 from unittest import TestCase
 from transformer.model import Transformer
 
@@ -21,4 +22,18 @@ class TestEncoder(TestCase):
                              'dropout': 0.1},
         }
 
+        # 1. test constructor
         transformer = Transformer(params)
+
+        # 2. test forward pass
+        batch_size = 64
+        input_sequence_length = 10
+        output_sequence_length = 13
+
+        src_sequences = torch.ones((batch_size, input_sequence_length))
+        tgt_sequences = torch.ones((batch_size, output_sequence_length))
+
+        logits = transformer(src_sequences=src_sequences, src_masks=None, tgt_sequences=tgt_sequences, tgt_masks=None)
+
+        self.assertIsInstance(logits, torch.Tensor)
+        self.assertEqual(logits.shape, torch.Size([batch_size, output_sequence_length, params['tgt_vocab_size']]))
