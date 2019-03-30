@@ -21,3 +21,5 @@ class TestMultiHeadAttention(TestCase):
 
         self.assertIsInstance(output, torch.Tensor)
         self.assertEqual(output.shape, values.shape)
+        # check no nan values
+        self.assertEqual(torch.isnan(output).sum(), 0)
