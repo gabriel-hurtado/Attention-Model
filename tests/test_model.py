@@ -37,3 +37,5 @@ class TestEncoder(TestCase):
 
         self.assertIsInstance(logits, torch.Tensor)
         self.assertEqual(logits.shape, torch.Size([batch_size, output_sequence_length, params['tgt_vocab_size']]))
+        # check no nan values
+        self.assertEqual(torch.isnan(logits).sum(), 0)

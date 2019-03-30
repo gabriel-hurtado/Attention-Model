@@ -27,3 +27,5 @@ class TestOutputClassifier(TestCase):
         # softmax should make that sum(output, dim=-1) is a tensor (batch_size, seq_length) of 1s.
         # check that with a delta to allow for randomness.
         self.assertAlmostEqual(torch.sum(output), batch_size * sequence_length, delta=0.1)
+        # check no nan values
+        self.assertEqual(torch.isnan(output).sum(), 0)

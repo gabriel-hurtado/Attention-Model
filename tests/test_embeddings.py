@@ -51,3 +51,5 @@ class TestPositionalEncoding(TestCase):
 
         # verify that the output of the forward pass still requires gradients
         self.assertEqual(output.requires_grad, True)
+        # check no nan values
+        self.assertEqual(torch.isnan(x).sum(), 0)

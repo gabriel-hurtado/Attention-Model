@@ -20,7 +20,9 @@ class TestEncoder(TestCase):
         encoder = Encoder(layer=enc_layer, n_layers=6)
         x = torch.ones((64, 10, 512))
 
-        out = encoder.forward(x, mask=None, verbose=True)
+        out = encoder.forward(x, mask=None, verbose=False)
 
         self.assertIsInstance(out, torch.Tensor)
         self.assertEqual(out.shape, x.shape)
+        # check no nan values
+        self.assertEqual(torch.isnan(out).sum(), 0)
