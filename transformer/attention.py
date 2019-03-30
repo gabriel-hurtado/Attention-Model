@@ -73,7 +73,7 @@ class ScaledDotProductAttention(nn.Module):
         scores = torch.matmul(queries, keys.transpose(-2, -1)) / np.sqrt(d_k)
 
         if mask is not None:
-            scores = scores.masked_fill(mask, -np.inf)
+            scores = scores.masked_fill(mask, -1e9)
 
         # get attn weights
         attention_weights = self.softmax(scores)
