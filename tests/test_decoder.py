@@ -45,3 +45,5 @@ class TestDecoderLayer(TestCase):
         self.assertEqual(out.shape, x.shape)
         self.assertEqual(out.shape, memory.shape)
         self.assertEqual(x.shape, memory.shape)
+        self.assertEqual(torch.isnan(out).sum(), 0)
+        
