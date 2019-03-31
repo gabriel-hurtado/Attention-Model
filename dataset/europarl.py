@@ -2,10 +2,40 @@ from enum import IntEnum, auto
 
 import numpy as np
 from torch.utils import data
+from torch.autograd import Variable
+from transformer.utils import  subsequent_mask
 
 class Split(IntEnum):
     Train = auto()
     Validation = auto()
+
+
+class BatchWrapper:
+    "Object for holding a batch of data with mask during training."
+
+    def __init__(self, source, target=None, pad=0):
+        # save source and mask for use during training
+        self.source = source
+        self.source_mask = (source != pad).unsqueeze(-2)
+
+        if target is not None:
+            self.target = target[:, :-1]
+            # shift one position to the right so the target is the next word
+            self.target_ = target[:, 1:]
+            # create mask to hide padding and future words (subsequent)
+            self.target_mask = self.make_std_mask(self.target, pad)
+            # investigate what ntokens stands for ?
+            self.ntokens = (self.target_ != pad).data.sum()
+
+    @staticmethod
+    def make_std_mask(target, pad):
+        "Create a mask to hide padding and future words."
+        # hide padding
+        target_mask = (target != pad).unsqueeze(-2)
+        # hide padding and future words
+        target_mask = target_mask & Variable(subsequent_mask(target.size(-1)).type_as(target_mask.data))
+        return target_mask
+
 
 class EuroparlLanguage(IntEnum):
     fr_en = auto()
@@ -40,8 +70,21 @@ class Europarl(data.Dataset):
         else:
             raise NotImplementedError()
 
+
     def __getitem__(self, index):
-        return self.array[self.indexes[index]]
+        source, target = self.array[self.indexes[index]]
+        return source, target
+
+    def content_len(self, batch_source, batch_target):
+        """
+        Called via the DataLoader during post processing of batch of data.
+        Wrap the batch in
+        :param batch: batch of sample source and target data. (Batch_size x Sequence x Dimension)
+        :return: BatchWrapper object with batches of source, target and masks.
+        """
+        batch_wrapper = BatchWrapper(batch_source, batch_target, pad=0)
+
+        return batch_wrapper
 
     def __len__(self):
         return len(self.indexes)
