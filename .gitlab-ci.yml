@@ -9,7 +9,7 @@ before_script:
   - source venv/bin/activate
   - pip install -r requirements.txt
 
-unittest:
+unit tests:
   stage: test
   script:
     - pip install unittest-xml-reporting
@@ -18,44 +18,16 @@ unittest:
     reports:
       junit: junit-reports/*.xml
   only:
-  - master
-  - develop
-  - merge_requests
+    - master
+    - develop
+    - merge_requests
 
 # pep8 runs different tests for different Python versions
-stylecheck:
+style check:
   stage: test
   script:
     - pip install pylint
     - pylint -d all ./*
   allow_failure: true
   only:
-  - master
-  - develop
-  except:
-  - merge_requests
-
-code_quality:
-  image: docker:stable
-  stage: test
-  variables:
-    DOCKER_DRIVER: overlay2
-  before_script:
-  - echo "Do nothing"
-  cache:
-    key: "code_quality"
-  only:
-  - merge_requests
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
-    - docker run
-        --env SOURCE_CODE="$PWD"
-        --volume "$PWD":/code
-        --volume /var/run/docker.sock:/var/run/docker.sock
-        "registry.gitlab.com/gitlab-org/security-products/codequality:$SP_VERSION" /code
-  artifacts:
-    reports:
-      codequality: gl-code-quality-report.json
+    - merge_requests
