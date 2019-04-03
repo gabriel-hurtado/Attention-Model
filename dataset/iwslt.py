@@ -53,7 +53,6 @@ class IWSLT(data.Dataset):
 
         # split dataset by loading corresponding source and target files from .data/ folder
         train, validation, test = datasets.IWSLT.splits(
-            split_ratio=split_ratio,
             random_state=random_state,
             root=ROOT_DATASET_DIR,  # To check if dataset already downloaded
             exts=language_pair.extensions(),
