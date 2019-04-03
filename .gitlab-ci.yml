@@ -16,7 +16,7 @@ unittest:
     - python -m xmlrunner -o junit-reports
   artifacts:
     reports:
-      junit: junit-reports/TEST-*.xml
+      junit: junit-reports/*.xml
   only:
   - master
   - develop
