@@ -259,4 +259,4 @@ $RECYCLE.BIN/
 
 
 # Dataset
-resources/IWSLT/
+resources/torchtext
