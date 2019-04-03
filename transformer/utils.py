@@ -14,7 +14,7 @@ def clone(module, N) -> nn.ModuleList:
 
 def subsequent_mask(size):
     """
-    Mask out subsequent positions.
+    Masks out subsequent positions.
     :param size: Input size
     :return: Tensor with boolean mask on subsequent position
     """

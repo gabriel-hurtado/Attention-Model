@@ -1,28 +1,89 @@
 import numpy as np
 from torch import Tensor
 from torch.autograd import Variable
+from torchtext.data import Batch, Dataset, Field
 
 from dataset.europarl import Europarl, Split
 from dataset.language_pairs import LanguagePair
 from transformer.utils import subsequent_mask
 
 
+class BatchMasker(Batch):
+    """
+    Handles the masking in a given batch.
+    """
+
+    def __init__(self, batch: Batch, padding_token: str = "<blank>"):
+        """
+        Constructs a batch masker.
+        The batch must have two fields: 'src' and 'trg', respectively the
+        source and target masks.
+
+        :param batch: The batch to mask out.
+        :param padding_token: The token used to pad that must be
+        """
+        super().__init__()
+        self.batch = batch
+
+        self.src_field = self.dataset.fields['src']  # type: Field
+        self.trg_field = self.dataset.fields['trg']  # type: Field
+
+        # Find integer value of "padding" in the respective vocabularies
+        src_padding = self.src_field.vocab.stoi[padding_token]
+        trg_padding = self.trg_field.vocab.stoi[padding_token]
+
+        masker = BatchWrapper(source=self.src, target=self.trg,
+                              pad_src=src_padding, pad_trg=trg_padding)
+        # The masks are everywhere the tensor is not equal to the padding value
+        # Additionnaly, we mask
+        self.src_mask = masker.source_mask  # type: Tensor
+        self.trg_mask = masker.target_mask  # type: Tensor
+
+    @property
+    def batch_size(self):
+        return self.batch.batch_size
+
+    @property
+    def src(self) -> Tensor:
+        return self.batch.src
+
+    @property
+    def trg(self) -> Tensor:
+        return self.batch.trg
+
+    @property
+    def dataset(self) -> Dataset:
+        return self.batch.dataset
+
+    @property
+    def fields(self):
+        return self.batch.fields
+
+    @property
+    def input_fields(self):
+        return self.batch.input_fields
+
+    @property
+    def target_fields(self):
+        return self.batch.target_fields
+
+
 class BatchWrapper:
     """Holds a batch of data that it can partially mask during training."""
 
-    def __init__(self, source, target=None, pad=0):
+    def __init__(self, source: Tensor, target: Tensor = None, pad_src=0, pad_trg=0):
         # save source and mask for use during training
         self.source = source
-        self.source_mask = (source != pad).unsqueeze(-2)
+        self.source_mask = (source != pad_src)  # type: Tensor
+        # Adds a dimension in the middle (equivalent to vec = vec[:,None,:])
+        self.source_mask.unsqueeze_(-2)
 
         if target is not None:
             self.target = target[:, :-1]
-            # shift one position to the right so the target is the next word
-            self.target_ = target[:, 1:]
             # create mask to hide padding and future words (subsequent)
-            self.target_mask = self.make_std_mask(self.target, pad)
-            # investigate what ntokens stands for ?
-            # self.ntokens = (self.target_ != pad).data.sum()
+            self.target_mask = self.make_std_mask(self.target, pad_trg)
+            # ntokens is the size of the sentence (excluding padding)
+            self.ntokens = (target[:, 1:] != pad_trg).data.sum()
 
     @staticmethod
     def make_std_mask(target, pad):
