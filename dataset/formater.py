@@ -38,7 +38,6 @@ class Formater(Europarl):
         # call base constructor
         super(Formater, self).__init__(language, split, split_size)
         self.pad = pad
-        self.separator = separator
 
 
     def __getitem__(self, index):
