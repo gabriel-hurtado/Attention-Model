@@ -3,7 +3,6 @@ from torch.autograd import Variable
 from torch import Tensor
 from dataset.europarl import Europarl, EuroparlLanguage, Split
 import numpy as np
-import spacy
 
 class BatchWrapper:
     "Object for holding a batch of data with mask during training."
