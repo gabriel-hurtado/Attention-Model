@@ -35,27 +35,31 @@ stylecheck:
   except:
   - merge_requests
 
-code_quality:
-  image: docker:stable
-  stage: test
-  variables:
-    DOCKER_DRIVER: overlay2
+deliverables:
+  stage: deploy
   before_script:
-  - echo "Do nothing"
-  cache:
-    key: "code_quality"
-  only:
-  - merge_requests
-  allow_failure: true
-  services:
-    - docker:stable-dind
+    - pip install nbconvert
   script:
-    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
-    - docker run
-        --env SOURCE_CODE="$PWD"
-        --volume "$PWD":/code
-        --volume /var/run/docker.sock:/var/run/docker.sock
-        "registry.gitlab.com/gitlab-org/security-products/codequality:$SP_VERSION" /code
+    - jupyter nbconvert --to html presentation.ipynb --template full --output index
+    - mkdir -p project_webpage/project_webpage
+    - mv index.html project_webpage/project_webpage/index.html
   artifacts:
-    reports:
-      codequality: gl-code-quality-report.json
+    name: "gradescope_upload"
+    paths:
+    - project_webpage
+  only:
+    - master
+
+pages:
+  stage: deploy
+  before_script:
+    - pip install nbconvert
+  script:
+    - jupyter nbconvert --to html presentation.ipynb --template full --output index
+    - mkdir public
+    - mv index.html public/index.html
+  artifacts:
+    paths:
+    - public
+  only:
+    - master
