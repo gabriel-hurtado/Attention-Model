@@ -13,7 +13,7 @@ class Tokenizer(object):
     Documentation @ https://spacy.io/usage/spacy-101
     """
 
-    def __init__(self, language: str = 'en'):
+    def __init__(self, language: str):
         """
         Loads the appropriate model from Spacy's API
 

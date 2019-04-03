@@ -15,8 +15,8 @@ class IWSLTLanguagePair(IntEnum):
     def tokenizer(self):
         if self == IWSLTLanguagePair.fr_en:
             return (
-                Tokenizer(language='fr'),
-                Tokenizer(language='en'),
+                Tokenizer(language='fr_core_news_sm'),
+                Tokenizer(language='en_core_web_sm'),
             )
         else:
             raise ValueError()
