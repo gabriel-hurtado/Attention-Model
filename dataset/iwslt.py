@@ -1,8 +1,10 @@
 from enum import IntEnum, auto
-from dataset.utils import Tokenizer
+
 from torch.utils import data
-from dataset.europarl import Split
 from torchtext import data, datasets
+
+from dataset.europarl import Split
+from dataset.utils import Tokenizer
 
 
 class IWSLTLanguage(IntEnum):
@@ -12,8 +14,10 @@ class IWSLTLanguage(IntEnum):
         if self == IWSLTLanguage.fr_en:
             return (
                 Tokenizer(language='fr'),
-                Tokenizer(language='en')
+                Tokenizer(language='en'),
             )
+        else:
+            raise ValueError()
 
     def extensions(self):
         if self == IWSLTLanguage.fr_en:
@@ -21,26 +25,33 @@ class IWSLTLanguage(IntEnum):
                 '.fr',
                 '.en'
             )
+        else:
+            raise ValueError()
 
     def path(self):
         if self == IWSLTLanguage.fr_en:
-            return ".data/iwslt/fr-en/"
+            return "resources/IWSLT/fr-en/"
+        else:
+            raise ValueError()
 
 
 class IWSLT(data.Dataset):
-    def __init__(self, language: IWSLTLanguage, split: Split, split_ratio=0.6, random_state=100):
-
+    def __init__(
+        self,
+        language: IWSLTLanguage,
+        split: Split,
+        split_ratio=0.6,
+        random_state=100,
+        b_of_sequence_word='<s>',
+        e_of_sequence_word='</s>',
+        blank_word="<blank>",
+    ):
         # load corresponding tokenizer
         source_tokenizer, target_tokenizer = language.tokenizer()
         # load corresponding extensions for IWSLT loading
         source_extension, target_extension = language.extensions()
         # path to dataset (if already downloaded)
         self.path = language.path()
-        # tokenize for beginning, end of sequence and blank
-        b_of_sequence_word = '<s>'
-        e_of_sequence_word = '</s>'
-        blank_word = "<blank>"
-
         # create pytorchtext data field to generate vocabulary
         self.source_field = data.Field(tokenize=source_tokenizer, pad_token=blank_word)
         self.target_field = data.Field(tokenize=target_tokenizer, init_token=b_of_sequence_word,
@@ -53,10 +64,11 @@ class IWSLT(data.Dataset):
         train, validation, test = datasets.IWSLT.splits(
             split_ratio=split_ratio,
             random_state=random_state,
-            check=self.path,# check if dataset already downloaded
+            check=self.path,  # check if dataset already downloaded
             exts=(source_extension, target_extension),
             fields=(self.source_field, self.target_field),
-            filter_pred=lambda x: len(vars(x)['src']) <= max_length and len(vars(x)['trg']) <= max_length)
+            filter_pred=lambda x: len(vars(x)['src']) <= max_length
+                                  and len(vars(x)['trg']) <= max_length)
 
         if split == Split.Train:
             self.array = train
