@@ -3,7 +3,8 @@ from unittest import TestCase, skipIf
 
 from torch.utils.data import DataLoader
 
-from dataset.europarl import EuroparlLanguage, Split
+from dataset.europarl import Split
+from dataset.language_pairs import LanguagePair
 from dataset.formatter import Formater
 
 
@@ -12,7 +13,7 @@ class TestFormatter(TestCase):
     def test_collate_fn(self):
         # initialization
         batch_size = 2
-        formater_dataset = Formater(language=EuroparlLanguage.fr_en, split=Split.Train,
+        formater_dataset = Formater(language=LanguagePair.fr_en, split=Split.Train,
                                     split_size=0.6)
 
         # instantiate DataLoader object

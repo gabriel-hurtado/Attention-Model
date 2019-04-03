@@ -2,7 +2,8 @@ import numpy as np
 from torch import Tensor
 from torch.autograd import Variable
 
-from dataset.europarl import Europarl, EuroparlLanguage, Split
+from dataset.europarl import Europarl, Split
+from dataset.language_pairs import LanguagePair
 from transformer.utils import subsequent_mask
 
 
@@ -35,7 +36,7 @@ class BatchWrapper:
 
 
 class Formater(Europarl):
-    def __init__(self, language: EuroparlLanguage, split: Split, split_size=0.6, pad=0):
+    def __init__(self, language: LanguagePair, split: Split, split_size=0.6, pad=0):
         # call base constructor
         super(Formater, self).__init__(language, split, split_size)
         self.pad = pad

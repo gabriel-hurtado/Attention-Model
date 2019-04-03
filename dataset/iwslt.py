@@ -4,33 +4,15 @@ from torch.utils import data
 from torchtext import data, datasets
 
 from dataset.europarl import Split
+from dataset.language_pairs import LanguagePair
 from dataset.utils import Tokenizer
 
 ROOT_DATASET_DIR = "resources/torchtext"
 
 
-class IWSLTLanguagePair(IntEnum):
-    fr_en = auto()
-
-    def tokenizer(self):
-        if self == IWSLTLanguagePair.fr_en:
-            return (
-                Tokenizer(language='fr_core_news_sm'),
-                Tokenizer(language='en_core_web_sm'),
-            )
-        else:
-            raise ValueError()
-
-    def extensions(self):
-        if self == IWSLTLanguagePair.fr_en:
-            return ('.fr', '.en')
-        else:
-            raise ValueError()
-
-
 class IWSLTDatasetBuilder():
     @staticmethod
-    def build(language_pair: IWSLTLanguagePair, split: Split, max_length=100, min_freq=2,
+    def build(language_pair: LanguagePair, split: Split, max_length=100, min_freq=2,
               start_token="<s>", eos_token="</s>", blank_token="<blank>", batch_size=32):
         """
         Initializes an iterator over the IWSLT dataset.
@@ -65,8 +47,7 @@ class IWSLTDatasetBuilder():
             exts=language_pair.extensions(),
             fields=(source_field, target_field),
             test=None,
-            filter_pred=lambda x: len(vars(x)['src']) <= max_length
-                                  and len(vars(x)['trg']) <= max_length
+            filter_pred=lambda x: (len(x.src), len(x.trg)) <= (max_length, max_length)
         )
 
         if split == Split.Train:
