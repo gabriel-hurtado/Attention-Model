@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from torch import Tensor
 from torch.autograd import Variable
@@ -32,12 +34,21 @@ class BatchMasker(Batch):
         src_padding = self.src_field.vocab.stoi[padding_token]
         trg_padding = self.trg_field.vocab.stoi[padding_token]
 
-        masker = BatchWrapper(source=self.src, target=self.trg,
-                              pad_src=src_padding, pad_trg=trg_padding)
-        # The masks are everywhere the tensor is not equal to the padding value
-        # Additionnaly, we mask
-        self.src_mask = masker.source_mask  # type: Tensor
-        self.trg_mask = masker.target_mask  # type: Tensor
+        # save source and mask for use during training
+        self.src_mask = (self.src != src_padding)  # type: Tensor
+        # Adds a dimension in the middle (equivalent to vec = vec[:,None,:])
+        self.src_mask.unsqueeze_(-2)
+
+        self.trg = None  # type: Optional[Tensor]
+        self.trg_mask = None  # type: Optional[Tensor]
+        self.trg_shifted = None  # type: Optional[Tensor]
+        if self.trg is not None:
+            self.trg = self.trg[:-1, :]
+            self.trg_shifted = self.trg[1:, :]  # type: Tensor
+            # create mask to hide padding and future words (subsequent)
+            self.trg_mask = self.make_std_mask(self.trg, trg_padding)
+            # ntokens is the size of the sentence (excluding padding)
+            self.ntokens = (self.trg_shifted != trg_padding).data.sum()
 
     @property
     def batch_size(self):
@@ -46,10 +57,6 @@ class BatchMasker(Batch):
     @property
     def src(self) -> Tensor:
         return self.batch.src
-
-    @property
-    def trg(self) -> Tensor:
-        return self.batch.trg
 
     @property
     def dataset(self) -> Dataset:
@@ -67,32 +74,14 @@ class BatchMasker(Batch):
     def target_fields(self):
         return self.batch.target_fields
 
-
-class BatchWrapper:
-    """Holds a batch of data that it can partially mask during training."""
-
-    def __init__(self, source: Tensor, target: Tensor = None, pad_src=0, pad_trg=0):
-        # save source and mask for use during training
-        self.source = source
-        self.source_mask = (source != pad_src)  # type: Tensor
-        # Adds a dimension in the middle (equivalent to vec = vec[:,None,:])
-        self.source_mask.unsqueeze_(-2)
-
-        if target is not None:
-            self.target = target[:, :-1]
-            # create mask to hide padding and future words (subsequent)
-            self.target_mask = self.make_std_mask(self.target, pad_trg)
-            # ntokens is the size of the sentence (excluding padding)
-            self.ntokens = (target[:, 1:] != pad_trg).data.sum()
-
     @staticmethod
     def make_std_mask(target, pad):
         """Creates a mask to hide padding and future words."""
         # hide padding
         target_mask = (target != pad).unsqueeze(-2)
         # hide padding and future words
-        target_mask = target_mask & Variable(
-            subsequent_mask(target.size(-1)).type_as(target_mask.data))
+        target_mask = (target_mask &
+                       Variable(subsequent_mask(target.size(-1)).type_as(target_mask.data)))
         return target_mask
 
 

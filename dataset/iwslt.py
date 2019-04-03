@@ -1,16 +1,29 @@
-from enum import IntEnum, auto
+from typing import Iterable
 
 from torch.utils import data
 from torchtext import data, datasets
 
 from dataset.europarl import Split
 from dataset.language_pairs import LanguagePair
-from dataset.utils import Tokenizer
 
 ROOT_DATASET_DIR = "resources/torchtext"
 
 
 class IWSLTDatasetBuilder():
+    @staticmethod
+    def transposed(batch_iterator: Iterable[data.Batch]):
+        """
+        Transposes each batch in a batch iterator.
+        This is needed as BucketIterator generates iterator with
+        dimensions (n, batch_size), when we want (batch_size, n).
+
+        :param batch_iterator: A batch iterator whose batches we want to transpose.
+        """
+        for batch in batch_iterator:
+            batch.src.transpose_(0, 1)
+            batch.trg.transpose_(0, 1)
+            yield batch
+
     @staticmethod
     def build(language_pair: LanguagePair, split: Split, max_length=100, min_freq=2,
               start_token="<s>", eos_token="</s>", blank_token="<blank>", batch_size=32):
@@ -47,7 +60,7 @@ class IWSLTDatasetBuilder():
             exts=language_pair.extensions(),
             fields=(source_field, target_field),
             test=None,
-            filter_pred=lambda x: (len(x.src), len(x.trg)) <= (max_length, max_length)
+            filter_pred=lambda x: all(val <= max_length for val in (x.src, x.trg))
         )
 
         if split == Split.Train:
@@ -59,7 +72,9 @@ class IWSLTDatasetBuilder():
 
         source_field.build_vocab(train, min_freq=min_freq)  # Build vocabulary on training set
         target_field.build_vocab(train, min_freq=min_freq)
-        return data.BucketIterator(
-            dataset=dataset, batch_size=batch_size,
-            sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
+        return IWSLTDatasetBuilder.transposed(
+            data.BucketIterator(
+                dataset=dataset, batch_size=batch_size,
+                sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
+            )
         )
