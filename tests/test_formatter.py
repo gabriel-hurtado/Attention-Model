@@ -4,10 +4,10 @@ from unittest import TestCase, skipIf
 from torch.utils.data import DataLoader
 
 from dataset.europarl import EuroparlLanguage, Split
-from dataset.formater import Formater
+from dataset.formatter import Formater
 
 
-class TestFormater(TestCase):
+class TestFormatter(TestCase):
     @skipIf(len(getenv("CI", "")) > 0, "skipping slow tests on CI")
     def test_collate_fn(self):
         # initialization
