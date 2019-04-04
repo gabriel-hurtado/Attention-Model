@@ -27,7 +27,42 @@ style check:
   stage: test
   script:
     - pip install pylint
-    - pylint -d all ./*
-  allow_failure: true
+    - pylint -e all -d invalid-name,missing-docstring --confidence HIGH,INFERENCE --generated-members="numpy.*,torch.*" -f colorized ./*
+    - echo "PyLint exit code:" $?
   only:
+<<<<<<< HEAD
     - merge_requests
+=======
+    - master
+    - develop
+    - merge_requests
+
+deliverables:
+  stage: deploy
+  before_script:
+    - pip install nbconvert
+  script:
+    - jupyter nbconvert --to html presentation.ipynb --template full --output index
+    - mkdir -p project_webpage/project_webpage
+    - mv index.html project_webpage/project_webpage/index.html
+  artifacts:
+    name: "gradescope_upload"
+    paths:
+      - project_webpage
+  only:
+    - master
+
+pages:
+  stage: deploy
+  before_script:
+    - pip install nbconvert
+  script:
+    - jupyter nbconvert --to html presentation.ipynb --template full --output index
+    - mkdir public
+    - mv index.html public/index.html
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
+>>>>>>> a14a30ef4900be83a9343de00629ce37c714cacf

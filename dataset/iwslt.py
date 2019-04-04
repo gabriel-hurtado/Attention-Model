@@ -1,78 +1,82 @@
-from enum import IntEnum, auto
+from typing import Iterable
 
 from torch.utils import data
 from torchtext import data, datasets
 
 from dataset.europarl import Split
-from dataset.utils import Tokenizer
+from dataset.language_pairs import LanguagePair
 
-ROOT_DATASET_DIR="resources/torchtext"
-
-
-class IWSLTLanguagePair(IntEnum):
-    fr_en = auto()
-
-    def tokenizer(self):
-        if self == IWSLTLanguagePair.fr_en:
-            return (
-                Tokenizer(language='fr_core_news_sm'),
-                Tokenizer(language='en_core_web_sm'),
-            )
-        else:
-            raise ValueError()
-
-    def extensions(self):
-        if self == IWSLTLanguagePair.fr_en:
-            return ('.fr', '.en')
-        else:
-            raise ValueError()
+ROOT_DATASET_DIR = "resources/torchtext"
 
 
-class IWSLT(data.Dataset):
-    def __init__(self, language_pair: IWSLTLanguagePair, split: Split, split_ratio=0.6,
-                 random_state=100, start_token="<s>", eos_token="</s>",
-                 blank_token="<blank>", max_length=100):
+class IWSLTDatasetBuilder():
+    @staticmethod
+    def transposed(batch_iterator: Iterable[data.Batch]):
         """
-        Initializes an IWSLT dataset.
+        Transposes each batch in a batch iterator.
+        This is needed as BucketIterator generates iterator with
+        dimensions (n, batch_size), when we want (batch_size, n).
+
+        :param batch_iterator: A batch iterator whose batches we want to transpose.
+        """
+        for batch in batch_iterator:
+            batch.src.transpose_(0, 1)
+            batch.trg.transpose_(0, 1)
+            yield batch
+
+    @staticmethod
+    def build(language_pair: LanguagePair, split: Split, max_length=100, min_freq=2,
+              start_token="<s>", eos_token="</s>", blank_token="<blank>", batch_size=32):
+        """
+        Initializes an iterator over the IWSLT dataset.
+        The iterator then yields batches of size `batch_size`.
+
+        Example:
+        >>> dataset_iterator = IWSLTDatasetBuilder.build(language_pair=language_pair,
+        ...                                              split=Split.Train,
+        ...                                              max_length=5,
+        ...                                              batch_size=batch_size)
+        >>> batch = next(iter(dataset_iterator))
 
         :param language_pair: The language pair for which to create a vocabulary.
         :param split: The split type.
-        :param split_ratio: The size of the split
-        :param random_state: The random seed to use.
+        :param max_length: Max length of sequence.
+        :param min_freq: The minimum frequency a word should have to be included in the vocabulary
         :param start_token: The token that marks the beginning of a sequence.
         :param eos_token: The token that marks an end of sequence.
         :param blank_token: The token to pad with.
-        :param max_length: Max length of sequence.
+        :param batch_size: Desired size of each batch.
         """
         # load corresponding tokenizer
         source_tokenizer, target_tokenizer = language_pair.tokenizer()
         # create pytorchtext data field to generate vocabulary
-        self.source_field = data.Field(tokenize=source_tokenizer, pad_token=blank_token)
-        self.target_field = data.Field(tokenize=target_tokenizer, init_token=start_token,
-                                       eos_token=eos_token, pad_token=blank_token)
+        source_field = data.Field(tokenize=source_tokenizer, pad_token=blank_token)
+        target_field = data.Field(tokenize=target_tokenizer, init_token=start_token,
+                                  eos_token=eos_token, pad_token=blank_token)
 
-        # split dataset by loading corresponding source and target files from .data/ folder
-        train, validation, test = datasets.IWSLT.splits(
-            random_state=random_state,
-            root=ROOT_DATASET_DIR,  # To check if dataset already downloaded
+
+        # Generates train and validation datasets
+        # noinspection PyTypeChecker
+        train, validation = datasets.IWSLT.splits(
+            root=ROOT_DATASET_DIR,  # To check if the dataset was already downloaded
             exts=language_pair.extensions(),
-            fields=(self.source_field, self.target_field),
-            filter_pred=lambda x: len(vars(x)['src']) <= max_length
-                                  and len(vars(x)['trg']) <= max_length
+            fields=(source_field, target_field),
+            test=None,
+            filter_pred=lambda x: all(val <= max_length for val in (x.src, x.trg))
         )
 
         if split == Split.Train:
-            examples = train
+            dataset = train
         elif split == Split.Validation:
-            examples = validation
+            dataset = validation
         else:
             raise NotImplementedError()
-        super().__init__(examples=examples,
-                         fields=[("source", self.source_field), ("target", self.target_field)])
 
-    def build_vocabulary(self):
-        min_freq = 2
-        # build source and target vocabulary for all words > MIN_FREQ
-        # take some times
-        #self.source_field.build_vocab(train.src, min_freq=min_freq)
-        #self.target_field.build_vocab(train.trg, min_freq=min_freq)
+        source_field.build_vocab(train, min_freq=min_freq)  # Build vocabulary on training set
+        target_field.build_vocab(train, min_freq=min_freq)
+        return IWSLTDatasetBuilder.transposed(
+            data.BucketIterator(
+                dataset=dataset, batch_size=batch_size,
+                sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
+            )
+        )
