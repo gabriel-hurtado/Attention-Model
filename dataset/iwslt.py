@@ -61,7 +61,7 @@ class IWSLTDatasetBuilder():
             exts=language_pair.extensions(),
             fields=(source_field, target_field),
             test=None,
-            filter_pred=lambda x: all(val <= max_length for val in (x.src, x.trg))
+            filter_pred=lambda x: all(len(val) <= max_length for val in (x.src, x.trg))
         )
 
         if split == Split.Train:
