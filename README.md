@@ -1,5 +1,7 @@
-# Learning
-Project for the Deep Learning class
+# Deep Learning
+Project for the [Deep Learning](https://www.cc.gatech.edu/classes/AY2019/cs7643_spring/#project) class
+
+**Public page:** [https://deepfrench.gitlab.io/deep-learning-project](https://deepfrench.gitlab.io/deep-learning-project)
 
 ## Getting started
 
@@ -15,6 +17,7 @@ If you installed `git-lfs` after cloning the repo, you can use the following com
 
 ```bash
 git lfs fetch
+git lfs pull
 ```
 
 ### Setting up an environment *(Optional)*

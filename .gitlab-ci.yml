@@ -30,4 +30,35 @@ style check:
     - pylint -d all ./*
   allow_failure: true
   only:
+    - master
+    - develop
     - merge_requests
+
+deliverables:
+  stage: deploy
+  before_script:
+    - pip install nbconvert
+  script:
+    - jupyter nbconvert --to html presentation.ipynb --template full --output index
+    - mkdir -p project_webpage/project_webpage
+    - mv index.html project_webpage/project_webpage/index.html
+  artifacts:
+    name: "gradescope_upload"
+    paths:
+      - project_webpage
+  only:
+    - master
+
+pages:
+  stage: deploy
+  before_script:
+    - pip install nbconvert
+  script:
+    - jupyter nbconvert --to html presentation.ipynb --template full --output index
+    - mkdir public
+    - mv index.html public/index.html
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
