@@ -12,8 +12,8 @@ class LanguagePair(IntEnum):
     def tokenizer(self):
         if self == LanguagePair.fr_en:
             return (
-                Tokenizer(language='fr_core_news_sm'),
-                Tokenizer(language='en_core_web_sm'),
+                Tokenizer(language='french'),
+                Tokenizer(language='english'),
             )
         else:
             raise ValueError()
