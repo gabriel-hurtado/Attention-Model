@@ -5,6 +5,12 @@ import torch.nn.functional as F
 
 from transformer.attention import MultiHeadAttention
 
+# if CUDA available, moves computations to GPU
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+
 
 class PositionwiseFeedForward(nn.Module):
     """
@@ -77,9 +83,9 @@ class LayerNormalization(nn.Module):
         """
         super(LayerNormalization, self).__init__()
 
-        # instantiate the learnable parameters.
-        self.a_2 = nn.Parameter(torch.ones(size))
-        self.b_2 = nn.Parameter(torch.zeros(size))
+        # instantiate the learnable parameters, with appropriate device
+        self.a_2 = nn.Parameter(torch.ones(size, device=device))
+        self.b_2 = nn.Parameter(torch.zeros(size, device=device))
 
         self.eps = eps
 
