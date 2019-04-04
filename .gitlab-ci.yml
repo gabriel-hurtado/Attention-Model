@@ -27,8 +27,8 @@ style check:
   stage: test
   script:
     - pip install pylint
-    - pylint -d all ./*
-  allow_failure: true
+    - pylint -e all -d invalid-name,missing-docstring --confidence HIGH,INFERENCE --generated-members="numpy.*,torch.*" -f colorized ./*
+    - echo "PyLint exit code:" $?
   only:
     - master
     - develop

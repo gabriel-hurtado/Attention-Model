@@ -108,7 +108,9 @@ class Formater(Europarl):
                             for arr in pair] for pair in batch])
 
         source, target = padded[:, 0, :], padded[:, 1, :]
-        return BatchWrapper(Tensor(source), Tensor(target), pad=self.pad)
+        # TODO: FIXME
+        # return BatchWrapper(Tensor(source), Tensor(target), pad=self.pad)
+        raise NotImplementedError()
 
     def __len__(self):
         return len(self.indexes)

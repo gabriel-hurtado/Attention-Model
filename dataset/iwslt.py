@@ -45,6 +45,7 @@ class IWSLTDatasetBuilder():
         :param start_token: The token that marks the beginning of a sequence.
         :param eos_token: The token that marks an end of sequence.
         :param blank_token: The token to pad with.
+        :param batch_size: Desired size of each batch.
         """
         # load corresponding tokenizer
         source_tokenizer, target_tokenizer = language_pair.tokenizer()
