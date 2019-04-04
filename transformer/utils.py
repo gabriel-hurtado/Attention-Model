@@ -4,6 +4,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+# if CUDA available, moves computations to GPU
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+
 
 def clone(module, N) -> nn.ModuleList:
     """
@@ -20,7 +26,7 @@ def subsequent_mask(size):
     """
     attn_shape = (1, size, size)
     subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
-    return torch.from_numpy(subsequent_mask) == 0
+    return torch.from_numpy(subsequent_mask).float().to(device) == 0
 
 
 class BColors:

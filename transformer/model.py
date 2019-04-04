@@ -8,6 +8,16 @@ from transformer.layers import PositionwiseFeedForward
 from transformer.classifier import OutputClassifier
 from transformer.embeddings import Embeddings, PositionalEncoding
 
+# if CUDA available, change some tensor types to move computations to GPU
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+    FloatTensor = torch.cuda.FloatTensor
+    LongTensor = torch.cuda.LongTensor
+else:
+    device = torch.device('cpu')
+    FloatTensor = torch.FloatTensor
+    LongTensor = torch.LongTensor
+
 
 class Transformer(nn.Module):
     """
@@ -109,20 +119,20 @@ class Transformer(nn.Module):
         :return: Logits, of shape (batch_size, out_seq_len, d_model)
         """
 
-        # 1. embed the input batch
-        src_sequences = self.src_embedings(src_sequences.type(torch.LongTensor))
+        # 1. embed the input batch: have to move input sequences to torch.*.LongTensor
+        src_sequences = self.src_embedings(src_sequences.type(LongTensor)).type(FloatTensor)
 
         # 2. encoder stack
-        encoder_output = self.encoder(src_sequences.type(torch.FloatTensor))
+        encoder_output = self.encoder(src_sequences)
 
         # 3. get subsequent mask to hide subsequent positions in the decoder.
         self_mask = subsequent_mask(tgt_sequences.shape[1])
 
         # 4. embed the output batch
-        tgt_sequences = self.tgt_embedings(tgt_sequences.type(torch.LongTensor))
+        tgt_sequences = self.tgt_embedings(tgt_sequences.type(LongTensor)).type(FloatTensor)
 
         # 4. decoder stack
-        decoder_output = self.decoder(x=tgt_sequences.type(torch.FloatTensor), memory=encoder_output, self_mask=self_mask, memory_mask=None)
+        decoder_output = self.decoder(x=tgt_sequences, memory=encoder_output, self_mask=self_mask, memory_mask=None)
 
         # 5. classifier
         logits = self.classifier(decoder_output)
