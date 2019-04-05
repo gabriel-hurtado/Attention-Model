@@ -9,31 +9,30 @@ before_script:
   - source venv/bin/activate
   - pip install -r requirements.txt
 
-unittest:
+unit tests:
   stage: test
   script:
     - pip install unittest-xml-reporting
     - python -m xmlrunner -o junit-reports
   artifacts:
     reports:
-      junit: junit-reports/TEST-*.xml
+      junit: junit-reports/*.xml
   only:
-  - master
-  - develop
-  - merge_requests
+    - master
+    - develop
+    - merge_requests
 
 # pep8 runs different tests for different Python versions
-stylecheck:
+style check:
   stage: test
   script:
     - pip install pylint
-    - pylint -d all ./*
-  allow_failure: true
+    - pylint -e all -d invalid-name,missing-docstring --confidence HIGH,INFERENCE --generated-members="numpy.*,torch.*" -f colorized ./*
+    - echo "PyLint exit code:" $?
   only:
-  - master
-  - develop
-  except:
-  - merge_requests
+    - master
+    - develop
+    - merge_requests
 
 deliverables:
   stage: deploy
@@ -46,7 +45,7 @@ deliverables:
   artifacts:
     name: "gradescope_upload"
     paths:
-    - project_webpage
+      - project_webpage
   only:
     - master
 
@@ -60,6 +59,6 @@ pages:
     - mv index.html public/index.html
   artifacts:
     paths:
-    - public
+      - public
   only:
     - master
