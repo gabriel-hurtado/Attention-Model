@@ -1,5 +1,7 @@
 import torch
 from transformer.model import Transformer
+from training.optimizer import NoamOpt
+from training.loss import LabelSmoothingLoss
 
 
 class Trainer(object):
@@ -25,6 +27,19 @@ class Trainer(object):
 
         # instantiate model
         model = Transformer(params["model"]).to(device)
+
+        # instantiate loss
+        # TODO: hardcode 0 as padding token for now, verify with Dataset class later
+        loss = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=0, smoothing=0.1)
+
+        # instantiate optimizer
+        optimizer = NoamOpt(model=model, model_size=params["model"]["d_model"], factor=2, warmup=4000)
+
+        # missing dataset class
+
+        # missing dataloader
+
+        # missing logger
 
     def train(self):
         pass

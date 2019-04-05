@@ -1,7 +1,7 @@
 import torch
 
 
-class NoamOpt:
+class NoamOpt(object):
     """
     The authors specify that they used the Adam optimizer with:
 
