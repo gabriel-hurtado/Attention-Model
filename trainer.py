@@ -31,18 +31,23 @@ class Trainer(object):
             device = torch.device('cpu')
 
         # instantiate model
-        model = Transformer(params["model"]).to(device)
+        self.model = Transformer(params["model"]).to(device)
 
         # instantiate loss
         # TODO: hardcode 0 as padding token for now, verify with Dataset class later
-        loss = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=0, smoothing=0.1)
+        self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=0, smoothing=0.1)
 
         # instantiate optimizer
-        optimizer = NoamOpt(model=model, model_size=params["model"]["d_model"], factor=2, warmup=4000)
+        self.optimizer = NoamOpt(model=self.model, model_size=params["model"]["d_model"], factor=2, warmup=4000)
 
-        # missing dataset class
+        # get number of epochs and related hyper parameters
+        self.epochs = params["training"]["epochs"]
 
-        # missing dataloader
+        # initialize training Dataset class
+        self.training_dataset = None  # TODO
+
+        # initialize DataLoader
+        self.training_dataloader = None  # TODO
 
         # configure all logging
         self.configure_logging(training_problem_name="copy_task")
@@ -50,7 +55,43 @@ class Trainer(object):
         self.logger.info('Experiment setup done.')
 
     def train(self):
-        pass
+        """
+        Main training loop.
+
+            - Trains the Transformer model on the specified dataset for a given number of epochs
+            - Logs statistics to logger for every batch per epoch
+
+        """
+        self.model.train()
+        for epoch in range(self.epochs):
+
+            for i, batch in enumerate(self.training_dataloader):
+
+                # 1. reset all gradients
+                self.optimizer.zero_grad()
+
+                # Convert batch to CUDA.
+                if torch.cuda.is_available():
+                    batch = batch.cuda()
+
+                # 2. Perform forward calculation.
+                logits = self.model(batch.src_sequences, batch.src_masks, batch.tgt_sequences, batch.tgt_masks)
+
+                # 3. Evaluate loss function.
+                loss = self.loss_fn(logits, batch.tgt_sequences)
+
+                # 4. Backward gradient flow.
+                loss.backward()
+
+                # Log "elementary" statistics - episode and loss.
+                self.logger.info('Epoch: {} | Episode: {} | Loss: {}'.format(epoch, i, loss.item()))
+
+                # 5. Perform optimization.
+                self.optimizer.step()
+
+            # save model at end of each epoch
+            self.model.save(self.model_dir, epoch, loss.item())
+            self.logger.info("Model exported to checkpoint.")
 
     def configure_logging(self, training_problem_name) -> None:
         """
@@ -127,3 +168,30 @@ class Trainer(object):
         # add the handler to the logger
         self.logger.addHandler(fh)
 
+
+if __name__ == '__main__':
+
+    params = {
+        "training": {
+                "epochs": 1,
+        },
+
+        "model": {
+                'd_model': 512,
+                'src_vocab_size': 27000,
+                'tgt_vocab_size': 27000,
+
+                'N': 6,
+                'dropout': 0.1,
+
+                'attention': {'n_head': 8,
+                              'd_k': 64,
+                              'd_v': 64,
+                              'dropout': 0.1},
+
+                'feed-forward': {'d_ff': 2048,
+                                 'dropout': 0.1}
+        }
+    }
+    trainer = Trainer(params)
+    trainer.train()
