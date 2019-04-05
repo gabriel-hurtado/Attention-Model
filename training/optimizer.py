@@ -67,3 +67,6 @@ class NoamOpt(object):
         """
         return self.factor * (self.model_size ** (-0.5) *
                               min(self._step ** (-0.5), self._step * self.warmup ** (-1.5)))
+
+    def zero_grad(self):
+        self.optimizer.zero_grad()
