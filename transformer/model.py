@@ -155,7 +155,7 @@ class Transformer(nn.Module):
         """
 
         # Checkpoint to be saved.
-        chkpt = {'name': self.name,
+        chkpt = {'name': 'Transformer',
                  'state_dict': self.state_dict(),
                  'model_timestamp': datetime.now(),
                  'epoch': epoch_idx,
