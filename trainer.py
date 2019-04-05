@@ -3,10 +3,12 @@ import torch
 import logging
 import logging.config
 from datetime import datetime
+from torch.utils.data import DataLoader
 
 from transformer.model import Transformer
 from training.optimizer import NoamOpt
 from training.loss import LabelSmoothingLoss
+from dataset.copy_task import CopyTaskDataset
 
 
 class Trainer(object):
@@ -35,7 +37,8 @@ class Trainer(object):
 
         # instantiate loss
         # TODO: hardcode 0 as padding token for now, verify with Dataset class later
-        self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=0, smoothing=0.1)
+        # self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=0, smoothing=0.1)
+        self.loss_fn = torch.nn.CrossEntropyLoss()
 
         # instantiate optimizer
         self.optimizer = NoamOpt(model=self.model, model_size=params["model"]["d_model"], factor=2, warmup=4000)
@@ -44,10 +47,11 @@ class Trainer(object):
         self.epochs = params["training"]["epochs"]
 
         # initialize training Dataset class
-        self.training_dataset = None  # TODO
+        self.training_dataset = CopyTaskDataset(max_int=10, max_seq_length=10, size=100)
 
         # initialize DataLoader
-        self.training_dataloader = None  # TODO
+        self.training_dataloader = DataLoader(dataset=self.training_dataset, batch_size=1, shuffle=False,
+                                              collate_fn=self.training_dataset.collate)
 
         # configure all logging
         self.configure_logging(training_problem_name="copy_task")
@@ -75,10 +79,10 @@ class Trainer(object):
                     batch = batch.cuda()
 
                 # 2. Perform forward calculation.
-                logits = self.model(batch.src_sequences, batch.src_masks, batch.tgt_sequences, batch.tgt_masks)
+                logits = self.model(batch.src_sequences, None, batch.tgt_sequences, None)
 
                 # 3. Evaluate loss function.
-                loss = self.loss_fn(logits, batch.tgt_sequences)
+                loss = self.loss_fn(logits.transpose(2,1), batch.tgt_sequences)
 
                 # 4. Backward gradient flow.
                 loss.backward()
@@ -173,13 +177,13 @@ if __name__ == '__main__':
 
     params = {
         "training": {
-                "epochs": 1,
+                "epochs": 5,
         },
 
         "model": {
                 'd_model': 512,
-                'src_vocab_size': 27000,
-                'tgt_vocab_size': 27000,
+                'src_vocab_size': 10,
+                'tgt_vocab_size': 10,
 
                 'N': 6,
                 'dropout': 0.1,
