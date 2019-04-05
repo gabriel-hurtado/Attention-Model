@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from datetime import datetime
 from transformer.utils import subsequent_mask
 from transformer.encoder import Encoder, EncoderLayer
 from transformer.decoder import Decoder, DecoderLayer
@@ -103,7 +104,7 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, src_sequences, src_masks, tgt_sequences, tgt_masks):
+    def forward(self, src_sequences, src_masks, tgt_sequences, tgt_masks) -> torch.Tensor:
         """
         DISCLAIMER: There are missing parts / bugs in this forward for certain.
         Have to identify & fix them.
@@ -138,3 +139,51 @@ class Transformer(nn.Module):
         logits = self.classifier(decoder_output)
 
         return logits
+
+    def save(self, model_dir: str, epoch_idx: int, loss_value: float) -> None:
+        """
+        Method to save a model along with a couple of information: number of training epochs and reached loss.
+
+        # TODO: Could be extended if wish to save more statistics and state of model (e.g. 'converged' or not).
+
+        :param model_dir: Directory where the model will be saved.
+
+        :param epoch_idx: Epoch number.
+
+        :param loss_value: Reached loss value at end of epoch ``epoch_idx``.
+        """
+
+        # Checkpoint to be saved.
+        chkpt = {'name': self.name,
+                 'state_dict': self.state_dict(),
+                 'model_timestamp': datetime.now(),
+                 'epoch': epoch_idx,
+                 'loss': loss_value
+                 }
+
+        filename = model_dir + 'model_epoch_{}.pt'.format(epoch_idx)
+        torch.save(chkpt, filename)
+
+    def load(self, checkpoint_file, logger) -> None:
+        """
+        Loads a model from the specified checkpoint file.
+
+        :param checkpoint_file: File containing dictionary with model state and statistics.
+
+        :param: logger: Logger object (to indicate number of trained epochs and loss value from loaded model).
+
+        """
+        # Load checkpoint
+        # This is to be able to load a CUDA-trained model on CPU
+        chkpt = torch.load(checkpoint_file, map_location=lambda storage, loc: storage)
+
+        # Load model.
+        self.load_state_dict(chkpt['state_dict'])
+
+        # Print statistics.
+        logger.info(
+            "Imported Transformer parameters from checkpoint from {} (epoch: {}, loss: {})".format(
+                chkpt['model_timestamp'],
+                chkpt['epoch'],
+                chkpt['loss'],
+                ))
