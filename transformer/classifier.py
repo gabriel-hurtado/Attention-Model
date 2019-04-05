@@ -31,4 +31,5 @@ class OutputClassifier(nn.Module):
 
         :return: Next token probabilities, of shape (batch_size, seq_len, vocab).
         """
-        return F.softmax(self.linear1(x), dim=-1)
+        # return F.softmax(self.linear1(x), dim=-1)
+        return self.linear1(x)
