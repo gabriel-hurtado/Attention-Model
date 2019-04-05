@@ -104,6 +104,7 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+    # pylint: disable=unused-argument
     def forward(self, src_sequences, src_masks, tgt_sequences, tgt_masks) -> torch.Tensor:
         """
         DISCLAIMER: There are missing parts / bugs in this forward for certain.

@@ -20,11 +20,12 @@ def clone(module, N) -> nn.ModuleList:
 
 def subsequent_mask(size):
     """
-    Mask out subsequent positions.
+    Masks out subsequent positions.
     :param size: Input size
     :return: Tensor with boolean mask on subsequent position
     """
     attn_shape = (1, size, size)
+    # pylint: disable=no-member
     subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
     return torch.from_numpy(subsequent_mask).float().to(device) == 0
 
