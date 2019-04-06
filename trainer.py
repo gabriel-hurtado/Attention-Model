@@ -47,14 +47,25 @@ class Trainer(object):
         self.epochs = params["training"]["epochs"]
 
         # initialize training Dataset class
-        self.training_dataset = CopyTaskDataset(max_int=params["dataset"]["max_int"],
-                                                max_seq_length=params["dataset"]["max_seq_length"],
-                                                size=params["dataset"]["size"])
+        self.training_dataset = CopyTaskDataset(max_int=params["dataset"]["training"]["max_int"],
+                                                max_seq_length=params["dataset"]["training"]["max_seq_length"],
+                                                size=params["dataset"]["training"]["size"])
 
         # initialize DataLoader
         self.training_dataloader = DataLoader(dataset=self.training_dataset, batch_size=params["training"]["batch_size"],
                                               shuffle=False, num_workers=0,
                                               collate_fn=self.training_dataset.collate)
+
+        # initialize validation Dataset class
+        self.validation_dataset = CopyTaskDataset(max_int=params["dataset"]["validation"]["max_int"],
+                                                  max_seq_length=params["dataset"]["validation"]["max_seq_length"],
+                                                  size=params["dataset"]["validation"]["size"])
+
+        # initialize Validation DataLoader
+        self.validation_dataloader = DataLoader(dataset=self.validation_dataset, batch_size=len(self.validation_dataset),
+                                                shuffle=False, num_workers=0,
+                                                collate_fn=self.validation_dataset.collate)
+
         # configure all logging
         self.configure_logging(training_problem_name="copy_task")
 
@@ -68,9 +79,9 @@ class Trainer(object):
             - Logs statistics to logger for every batch per epoch
 
         """
-        self.model.train()
         for epoch in range(self.epochs):
 
+            self.model.train()
             for i, batch in enumerate(self.training_dataloader):
 
                 # 1. reset all gradients
@@ -98,6 +109,23 @@ class Trainer(object):
             # save model at end of each epoch
             self.model.save(self.model_dir, epoch, loss.item())
             self.logger.info("Model exported to checkpoint.")
+
+            # validate the model on the validation set
+            self.model.eval()
+            for batch in self.validation_dataloader:
+
+                # Convert batch to CUDA.
+                if torch.cuda.is_available():
+                    batch.cuda()
+
+                # 1. Perform forward calculation.
+                logits = self.model(batch.src_sequences, None, batch.tgt_sequences, None)
+
+                # 2. Evaluate loss function.
+                loss = self.loss_fn(logits.transpose(2, 1), batch.tgt_sequences)
+
+                # Log "elementary" statistics - episode and loss.
+                self.logger.info('Validation Set | Loss: {}'.format(loss.item()))
 
     def configure_logging(self, training_problem_name) -> None:
         """
@@ -184,9 +212,16 @@ if __name__ == '__main__':
         },
 
         "dataset": {
-            'max_int': 10,
-            'max_seq_length': 10,
-            'size': 10000
+            'training': {
+                    'max_int': 10,
+                    'max_seq_length': 10,
+                    'size': 10000},
+
+            'validation': {
+                'max_int': 10,
+                'max_seq_length': 10,
+                'size': 1000}
+
         },
 
         "model": {
