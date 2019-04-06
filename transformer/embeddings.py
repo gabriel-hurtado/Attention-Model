@@ -1,11 +1,13 @@
 import torch
-from torch import nn, Tensor
+from torch import nn, Tensor, tensor
 
 # if CUDA available, moves computations to GPU
 if torch.cuda.is_available():
     device = torch.device('cuda')
+    FloatTensor = torch.cuda.FloatTensor
 else:
     device = torch.device('cpu')
+    FloatTensor = torch.FloatTensor
 
 
 class Embeddings(nn.Module):
@@ -21,10 +23,10 @@ class Embeddings(nn.Module):
         """
         super().__init__()
         self.embeddings = nn.Embedding(vocab_size, d_model)
-        self.d_model_sqrt = torch.sqrt(Tensor([d_model], device=device))
+        self.d_model_sqrt = torch.sqrt(tensor([d_model]).type(FloatTensor))
 
     def forward(self, x):
-        return self.embeddings(x) * self.d_model_sqrt
+        return self.embeddings(x).type(FloatTensor) * self.d_model_sqrt
 
 
 class PositionalEncoding(nn.Module):
@@ -76,7 +78,7 @@ class PositionalEncoding(nn.Module):
         position = torch.arange(0., max_len, device=device).unsqueeze(1)  # shape will be (max_len, 1)
 
         # division term: use exponential & log for numerical stability?
-        div_term = torch.exp(torch.arange(0., d_model, 2, device=device) * -(torch.log(Tensor([10000.0], device=device)) / d_model))
+        div_term = torch.exp(torch.arange(0., d_model, 2, device=device) * -(torch.log(tensor([10000.0], device=device)) / d_model))
 
         # even dimension: sinusoid
         pos_encoding[:, 0::2] = torch.sin(position * div_term)
