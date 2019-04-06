@@ -47,12 +47,14 @@ class Trainer(object):
         self.epochs = params["training"]["epochs"]
 
         # initialize training Dataset class
-        self.training_dataset = CopyTaskDataset(max_int=10, max_seq_length=10, size=100)
+        self.training_dataset = CopyTaskDataset(max_int=params["dataset"]["max_int"],
+                                                max_seq_length=params["dataset"]["max_seq_length"],
+                                                size=params["dataset"]["size"])
 
         # initialize DataLoader
-        self.training_dataloader = DataLoader(dataset=self.training_dataset, batch_size=1, shuffle=False,
+        self.training_dataloader = DataLoader(dataset=self.training_dataset, batch_size=params["training"]["batch_size"],
+                                              shuffle=False, num_workers=0,
                                               collate_fn=self.training_dataset.collate)
-
         # configure all logging
         self.configure_logging(training_problem_name="copy_task")
 
@@ -76,7 +78,7 @@ class Trainer(object):
 
                 # Convert batch to CUDA.
                 if torch.cuda.is_available():
-                    batch = batch.cuda()
+                    batch.cuda()
 
                 # 2. Perform forward calculation.
                 logits = self.model(batch.src_sequences, None, batch.tgt_sequences, None)
@@ -178,6 +180,13 @@ if __name__ == '__main__':
     params = {
         "training": {
                 "epochs": 5,
+                "batch_size": 32
+        },
+
+        "dataset": {
+            'max_int': 10,
+            'max_seq_length': 10,
+            'size': 10000
         },
 
         "model": {
