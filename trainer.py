@@ -243,3 +243,8 @@ if __name__ == '__main__':
     }
     trainer = Trainer(params)
     trainer.train()
+
+    src = torch.Tensor([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]])
+
+    predictions = trainer.model.greedy_decode(src, None, start_symbol=1)
+    print(predictions)
