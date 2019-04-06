@@ -131,7 +131,7 @@ class Transformer(nn.Module):
         self_mask = subsequent_mask(tgt_sequences.shape[1])
 
         # 4. embed the output batch
-        tgt_sequences = self.tgt_embedings(tgt_sequences.type(LongTensor)).type(FloatTensor)
+        tgt_sequences = self.tgt_embedings(tgt_sequences.type(LongTensor))
 
         # 4. decoder stack
         decoder_output = self.decoder(x=tgt_sequences, memory=encoder_output, self_mask=self_mask, memory_mask=None)
@@ -140,6 +140,52 @@ class Transformer(nn.Module):
         logits = self.classifier(decoder_output)
 
         return logits
+
+    def greedy_decode(self, src: torch.Tensor, src_mask: torch.Tensor, start_symbol=1) -> torch.Tensor:
+        """
+        Returns the prediction for `src` using greedy decoding for simplicity.
+        # TODO: documentation
+
+        :param src: sample for which to produce predictions.
+
+        :param src_mask: Associated `src` mask
+
+        :param start_symbol: Symbol used as initial value for the Decoder. Should correspond to start_token="<s>" in the translation task.
+
+        """
+        # 0. Ensure inference mode
+        self.eval()
+
+        # 1. Embed src
+        embedded = self.src_embedings(src.type(LongTensor))
+
+        # 2. Encode embedded inputs
+        memory = self.encoder(x=embedded, mask=src_mask)
+
+        # 3. Create initial input for decoder
+        decoder_in = torch.ones(src.shape[0], 1).type(FloatTensor) * start_symbol
+
+        for i in range(src.shape[1] - 1):
+
+            # 4. Embed decoder_in
+            decoder_in_embed = self.tgt_embedings(decoder_in.type(LongTensor))
+
+            # 5. Go through decoder
+            out = self.decoder(x=decoder_in_embed, memory=memory,
+                               self_mask=subsequent_mask(decoder_in.shape[1]),
+                               memory_mask=None)
+
+            # 6. classifier: TODO: Why only last word?
+            logits = self.classifier(out[:, -1])
+
+            # 7. Get predicted token for each sample in the batch
+            _, next_token = logits.max(dim=1, keepdim=True)
+
+            # 8. Concatenate predicted token with previous predictions
+            decoder_in = torch.cat([decoder_in, next_token.type(FloatTensor)], dim=1)
+
+        # 9. Return entire prediction
+        return decoder_in
 
     def save(self, model_dir: str, epoch_idx: int, loss_value: float) -> None:
         """
