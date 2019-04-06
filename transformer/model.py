@@ -122,7 +122,7 @@ class Transformer(nn.Module):
         """
 
         # 1. embed the input batch: have to move input sequences to torch.*.LongTensor
-        src_sequences = self.src_embedings(src_sequences.type(LongTensor)).type(FloatTensor)
+        src_sequences = self.src_embedings(src_sequences.type(LongTensor))
 
         # 2. encoder stack
         encoder_output = self.encoder(src_sequences)
