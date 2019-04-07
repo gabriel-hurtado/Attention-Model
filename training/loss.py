@@ -128,7 +128,7 @@ class LabelSmoothingLoss(nn.Module):
         :return: loss value
         """
         # ensure size of predictions of model matches given size at init
-        assert x.shape[1] == self.size, "The size of x ({}) doesn't match the given size in __init__ ({})".format(x.shape[1], self.size)
+        assert x.shape[2] == self.size, "The size of x ({}) doesn't match the given size in __init__ ({})".format(x.shape[2], self.size)
 
         batch_size, seq_len, vocabulary_size = x.size()
 
