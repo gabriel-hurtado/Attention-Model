@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 
 from transformer.model import Transformer
 from training.optimizer import NoamOpt
-from training.loss import LabelSmoothingLoss
+from training.loss import LabelSmoothingLoss, CrossEntropyLoss
 from dataset.copy_task import CopyTaskDataset
 
 
@@ -32,13 +32,21 @@ class Trainer(object):
         else:
             device = torch.device('cpu')
 
+        # configure all logging
+        self.configure_logging(training_problem_name="copy_task")
+
         # instantiate model
         self.model = Transformer(params["model"]).to(device)
 
         # instantiate loss
-        # TODO: hardcode 0 as padding token for now, verify with Dataset class later
-        # self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=0, smoothing=0.1)
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+        # TODO: hardcode -1 as padding token for now, verify with Dataset class later
+
+        if "smoothing" in params["training"]:
+            self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=-1, smoothing=params["training"]["smoothing"])
+            self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(params["training"]["smoothing"]))
+        else:
+            self.loss_fn = CrossEntropyLoss(size=params["model"]["tgt_vocab_size"], pad_token=-1)
+            self.logger.info("Using CrossEntropyLoss.")
 
         # instantiate optimizer
         self.optimizer = NoamOpt(model=self.model, model_size=params["model"]["d_model"], factor=2, warmup=4000)
@@ -66,9 +74,6 @@ class Trainer(object):
                                                 shuffle=False, num_workers=0,
                                                 collate_fn=self.validation_dataset.collate)
 
-        # configure all logging
-        self.configure_logging(training_problem_name="copy_task")
-
         self.logger.info('Experiment setup done.')
 
     def train(self):
@@ -95,7 +100,7 @@ class Trainer(object):
                 logits = self.model(batch.src_sequences, None, batch.tgt_sequences, None)
 
                 # 3. Evaluate loss function.
-                loss = self.loss_fn(logits.transpose(2,1), batch.tgt_sequences)
+                loss = self.loss_fn(logits, batch.tgt_sequences)
 
                 # 4. Backward gradient flow.
                 loss.backward()
@@ -208,7 +213,8 @@ if __name__ == '__main__':
     params = {
         "training": {
                 "epochs": 5,
-                "batch_size": 32
+                "batch_size": 2,
+                "smoothing": 0.1
         },
 
         "dataset": {
