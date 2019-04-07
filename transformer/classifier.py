@@ -25,11 +25,10 @@ class OutputClassifier(nn.Module):
         """
         Forward pass of the ``OutputClassifier``.
 
-        Simply goes through a linear layer and normalizes the prediction with a softmax function.
+        Simply goes through a linear layer and return logits (i.e. raw scores, not normalized probabilities).
 
         :param x: Input Tensor, which should come from the ``Decoder``. Shape should be (batch_size, seq_len, d_model).
 
-        :return: Next token probabilities, of shape (batch_size, seq_len, vocab).
+        :return: Next token raw scores, of shape (batch_size, seq_len, vocab).
         """
-        # return F.softmax(self.linear1(x), dim=-1)
         return self.linear1(x)
