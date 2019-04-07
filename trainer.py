@@ -168,15 +168,10 @@ class Trainer(object):
         self.logger = logging.getLogger(name='Trainer')
 
         # Prepare the output path for logging
-        while True:  # Dirty fix: if log_dir already exists, wait for 1 second and try again
-            try:
-                time_str = '{0:%Y%m%d_%H%M%S}'.format(datetime.now())
-                self.log_dir = 'experiments/' + training_problem_name + '/' + time_str + '/'
-                os.makedirs(self.log_dir, exist_ok=False)
-            except FileExistsError:
-                sleep(1)
-            else:
-                break
+        time_str = '{0:%Y%m%d_%H%M%S}'.format(datetime.now())
+        self.log_dir = 'experiments/' + training_problem_name + '/' + time_str + '/'
+
+        os.makedirs(self.log_dir, exist_ok=False)
 
         # Set log dir and add the handler for the logfile to the logger.
         self.log_file = self.log_dir + 'training.log'
