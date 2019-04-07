@@ -22,7 +22,7 @@ class LabelSmoothingLoss(nn.Module):
 
     Idea of label smoothing: Relax the confidence on the labels.
 
-    Smooth the labels predicted probabilities towards 1 / n_classes.
+    Smooth the labels predicted probabilities towards 1 / n_classes. This works by modifying the ground truth probabilities.
 
     The equation (from tensorflow [1]_):
 
@@ -45,41 +45,66 @@ class LabelSmoothingLoss(nn.Module):
 
         :param smoothing: Smoothing factor.
         """
+        assert 0.0 < smoothing <= 1.0, "The smoothing factor should be in [0, 1], got {}.".format(smoothing)
+
         # call base constructor
         super(LabelSmoothingLoss, self).__init__()
 
+        self.size = size
+
         # instantiate loss, ‘batchmean’: the sum of the output will be divided by batchsize
         self.criterion = nn.KLDivLoss(reduction='batchmean')
-        self.padding_token = padding_token
-        self.confidence = 1.0 - smoothing
-        self.smoothing = smoothing
-        self.size = size
-        self.true_dist = None
 
-    def forward(self, x, target) -> Tensor:
+        # LogSoftmax layer
+        self.log_softmax = nn.LogSoftmax(dim=-1)
+
+        # padding token to ignore
+        self.padding_token = padding_token
+
+        self.confidence = 1.0 - smoothing
+        self.smoothing = smoothing / (size - 2)  # exclude pad and true label
+
+        # create & save a tensor of size (1, size) containing the smoothing value everywhere
+        # will be used as a basis to create label-smoothed targets:
+        # - simply have to add confidence at true index and ignore padding
+        smoothed_targets = torch.full((size,), self.smoothing)
+        smoothed_targets[self.padding_token] = 0
+        self.register_buffer('smoothed_targets', smoothed_targets.unsqueeze(0))  # (1, size)
+
+    def forward(self, x, targets) -> Tensor:
         """
         Forward pass of the LabelSmoothingLoss.
 
-        :param x: predictions of the model, expected to contain log-probabilities.
-        :param target: Ground truth, given as probabilities (i.e. without taking the logarithm).
+        :param x: predictions of the model (i.e. raw class scores), of shape [batch_size, seq_length, vocabulary_size]
+        :param targets: Ground truth tokens indices, of shape [batch_size, seq_length]
 
-        :return: loss
+        :return: loss value
         """
         # ensure size of predictions of model matches given size at init
-        assert x.size(1) == self.size, "The size of x ({}) doesn't match the given size in __init__ ({})".format(x.size(1), self.size)
+        assert x.shape[1] == self.size, "The size of x ({}) doesn't match the given size in __init__ ({})".format(x.shape[1], self.size)
 
-        # apply label smoothing on the predictions
-        true_dist = x.data.clone()
-        true_dist.fill_(self.smoothing / (self.size - 2))
-        true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
-        true_dist[:, self.padding_token] = 0
+        batch_size, seq_len, vocabulary_size = x.size()
 
-        # padding mask
-        mask = torch.nonzero(target.data == self.padding_token)
+        # go through LogSoftmax layer and flatten out the tensors for simplicity
+        outputs_log_softmax = self.log_softmax(x)
+        outputs_flat = outputs_log_softmax.view(batch_size * seq_len, vocabulary_size)
+        targets_flat = targets.view(batch_size * seq_len)
 
-        if mask.dim() > 0:
-            true_dist.index_fill_(0, mask.squeeze(), 0.0)
+        # repeat the smoothed_targets tensor as necessary to match batch size
+        smoothed_targets = self.smoothed_targets.repeat(targets_flat.size(0), 1)
+        # smoothed_targets: (batch_size * seq_len, vocabulary_size)
 
-        self.true_dist = true_dist
+        # Copies self.confidence into smoothed_targets at indices specified by targets_flats
+        # dim (int) – the axis along which to index
+        smoothed_targets.scatter_(dim=1, index=targets_flat.unsqueeze(1), value=self.confidence)
+        # smoothed_targets: (batch_size * seq_len, vocabulary_size)
 
-        return self.criterion(x, true_dist)
+        # Fills elements of smoothed_targets with 0s where targets_flats is equal to pad index
+        # The shape of mask must be broadcastable with the shape of the underlying tensor.
+        smoothed_targets.masked_fill_(mask=(targets_flat == self.padding_token).unsqueeze(1), value=0)
+        # masked_targets: (batch_size * seq_len, vocabulary_size)
+
+        # Finally, go through loss function
+        loss = self.criterion(outputs_flat, smoothed_targets)
+
+        return loss
