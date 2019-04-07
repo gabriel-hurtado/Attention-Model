@@ -1,8 +1,8 @@
 import os
+import json
 import torch
 import logging
 import logging.config
-from time import sleep
 from datetime import datetime
 from torch.utils.data import DataLoader
 
@@ -34,7 +34,7 @@ class Trainer(object):
             device = torch.device('cpu')
 
         # configure all logging
-        self.configure_logging(training_problem_name="copy_task")
+        self.configure_logging(training_problem_name="copy_task", params=params)
 
         # instantiate model
         self.model = Transformer(params["model"]).to(device)
@@ -133,7 +133,7 @@ class Trainer(object):
                 # Log "elementary" statistics - episode and loss.
                 self.logger.info('Validation Set | Loss: {}'.format(loss.item()))
 
-    def configure_logging(self, training_problem_name) -> None:
+    def configure_logging(self, training_problem_name: str, params: dict) -> None:
         """
         Takes care of the initialization of logging-related objects:
 
@@ -181,7 +181,11 @@ class Trainer(object):
         self.model_dir = self.log_dir + 'models/'
         os.makedirs(self.model_dir, exist_ok=False)
 
-    def add_file_handler_to_logger(self, logfile):
+        # save the configuration as a json file in the experiments dir
+        with open(self.log_dir + 'params.json', 'w') as fp:
+            json.dump(params, fp)
+
+    def add_file_handler_to_logger(self, logfile: str) -> None:
         """
         Add a ``logging.FileHandler`` to the logger.
 
