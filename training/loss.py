@@ -2,17 +2,21 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
+# if CUDA available, moves computations to GPU
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+
 
 class CrossEntropyLoss(nn.Module):
     """
     Simple wrapper over the :py:class:`torch.nn.CrossEntropyLoss`, so that using it or :py:class:`LabelSmoothingLoss`
     is transparent in the :py:class:`Trainer`.
     """
-    def __init__(self, size: int, pad_token=0):
+    def __init__(self, pad_token=0):
         """
         Constructor of the :py:class:`CrossEntropyLoss` class.
-
-        :param size: Output vocabulary size.
 
         :param pad_token: Padding token to ignore during loss computation.
         """
@@ -108,7 +112,7 @@ class LabelSmoothingLoss(nn.Module):
         # create & save a tensor of size (1, size) containing the smoothing value everywhere
         # will be used as a basis to create label-smoothed targets:
         # - simply have to add confidence at true index and ignore padding
-        smoothed_targets = torch.full((size,), self.smoothing)
+        smoothed_targets = torch.full(size=(size,), fill_value=self.smoothing, device=device)
 
         # smoothed_targets[self.padding_token] = 0
 
