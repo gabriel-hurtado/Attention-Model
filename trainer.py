@@ -46,7 +46,7 @@ class Trainer(object):
             self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=-1, smoothing=params["training"]["smoothing"])
             self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(params["training"]["smoothing"]))
         else:
-            self.loss_fn = CrossEntropyLoss(size=params["model"]["tgt_vocab_size"], pad_token=-1)
+            self.loss_fn = CrossEntropyLoss(pad_token=-1)
             self.logger.info("Using CrossEntropyLoss.")
 
         # instantiate optimizer
@@ -128,7 +128,7 @@ class Trainer(object):
                 logits = self.model(batch.src_sequences, None, batch.tgt_sequences, None)
 
                 # 2. Evaluate loss function.
-                loss = self.loss_fn(logits.transpose(2, 1), batch.tgt_sequences)
+                loss = self.loss_fn(logits, batch.tgt_sequences)
 
                 # Log "elementary" statistics - episode and loss.
                 self.logger.info('Validation Set | Loss: {}'.format(loss.item()))
