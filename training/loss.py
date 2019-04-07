@@ -3,6 +3,47 @@ import torch.nn as nn
 from torch import Tensor
 
 
+class CrossEntropyLoss(nn.Module):
+    """
+    Simple wrapper over the :py:class:`torch.nn.CrossEntropyLoss`, so that using it or :py:class:`LabelSmoothingLoss`
+    is transparent in the :py:class:`Trainer`.
+    """
+    def __init__(self, size: int, pad_token=0):
+        """
+        Constructor of the :py:class:`CrossEntropyLoss` class.
+
+        :param size: Output vocabulary size.
+
+        :param pad_token: Padding token to ignore during loss computation.
+        """
+        # call base constructor
+        super(CrossEntropyLoss, self).__init__()
+
+        self.pad_token = pad_token
+
+        self.criterion = nn.CrossEntropyLoss(reduction='mean', ignore_index=self.pad_token)
+
+    def forward(self, x, targets) -> Tensor:
+        """
+        Forward pass of the :py:class:`CrossEntropyLoss`.
+
+        :param x: predictions of the model (i.e. raw class scores), of shape [batch_size, seq_length, vocabulary_size].
+
+        :param targets: Ground truth tokens indices, of shape [batch_size, seq_length]
+
+        :return: loss
+        """
+        batch_size, seq_len, vocabulary_size = x.size()
+
+        # flatten out tensors for simplicity
+        outputs_flat = x.view(batch_size * seq_len, vocabulary_size)
+        targets_flat = targets.view(batch_size * seq_len)
+
+        batch_loss = self.criterion(outputs_flat, targets_flat)
+
+        return batch_loss
+
+
 class LabelSmoothingLoss(nn.Module):
     """
     Wraps the :py:class:`torch.nn.KLDivLoss` loss with label smoothing.
@@ -68,7 +109,9 @@ class LabelSmoothingLoss(nn.Module):
         # will be used as a basis to create label-smoothed targets:
         # - simply have to add confidence at true index and ignore padding
         smoothed_targets = torch.full((size,), self.smoothing)
-        smoothed_targets[self.padding_token] = 0
+
+        # smoothed_targets[self.padding_token] = 0
+
         self.register_buffer('smoothed_targets', smoothed_targets.unsqueeze(0))  # (1, size)
 
     def forward(self, x, targets) -> Tensor:
