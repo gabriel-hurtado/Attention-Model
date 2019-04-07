@@ -24,7 +24,6 @@ class PositionwiseFeedForward(nn.Module):
 
 
     """
-    "Implements FFN equation."
 
     def __init__(self, d_model: int, d_ff: int, dropout=0.1):
         """
@@ -34,7 +33,7 @@ class PositionwiseFeedForward(nn.Module):
 
         :param d_ff: Hidden layer size (should be 2048).
 
-        :param dropout: dropout probability. Default is 0.1
+        :param dropout: In-betweeen layers dropout probability. Default is 0.1.
 
         """
         # call base constructor
@@ -97,7 +96,7 @@ class LayerNormalization(nn.Module):
 
         :return: normalized x.
         """
-        mean, std = x.mean(-1, keepdim=True), x.std(-1, keepdim=True)
+        mean, std = x.mean(dim=-1, keepdim=True), x.std(dim=-1, keepdim=True)
 
         return self.a_2 * (x - mean) / (std + self.eps) + self.b_2
 

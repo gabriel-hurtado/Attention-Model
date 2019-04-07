@@ -21,11 +21,25 @@ class Embeddings(nn.Module):
         :param d_model: The dimension of the output to use.
         :param vocab_size: The size of the vocabulary.
         """
-        super().__init__()
+        super(Embeddings, self).__init__()
         self.embeddings = nn.Embedding(vocab_size, d_model)
         self.d_model_sqrt = torch.sqrt(tensor([d_model]).type(FloatTensor))
 
     def forward(self, x):
+        """
+        Forward pass of the :py:class:`Embeddings` class.
+
+        Returns the following:
+
+        .. math::
+
+            self.look\_up\_table(x) \\cdot \sqrt{d\_model}
+
+        :param x: Input tensor to embed. Shape is arbitrary, but should be close to [batch_size, sequence_length].
+
+        :return: Embedded x, of shape [x.shape, d_model].
+        """
+
         return self.embeddings(x).type(FloatTensor) * self.d_model_sqrt
 
 
@@ -47,7 +61,9 @@ class PositionalEncoding(nn.Module):
         PE(pos,2 \\cdot i + 1) = cos(\\frac{pos}{10000^{\\frac{2 \\cdot i}{d_{model}}}})
 
 
-     where pos is the position and i is the dimension. That is, each dimension of the positional encoding corresponds to a sinusoid.
+
+    where pos is the position and i is the dimension. That is, each dimension of the positional encoding corresponds
+    to a sinusoid.
 
 
     In addition, dropout is applied to the sums of the embeddings and the positional encodings in both the
@@ -57,11 +73,12 @@ class PositionalEncoding(nn.Module):
 
     def __init__(self, d_model: int, dropout: float, max_len=5000):
         """
-        Instantiate the ``PositionalEncoding``.
+        Instantiate the :py:class:`PositionalEncoding`.
 
         :param d_model: Overall model dimension (Should be 512).
 
         :param dropout: Dropout probability (the paper mentions 0.1).
+                Dropout is applied after the sum with the positional encodings.
 
         :param max_len: Maximum sequence length.
 
@@ -98,11 +115,11 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, embeddings: Tensor) -> Tensor:
         """
-        Forward pass of the ``PositionalEncoding``.
+        Forward pass of the `:py:class:`PositionalEncoding`.
 
         :param embeddings: Input tensor, representing the current word embeddings. Should be of shape (batch_size, seq_len, d_model).
 
-        :return: Sum of embeddings and positional encodings (with dropout applied). Should be the same shape as x.
+        :return: Sum of embeddings and positional encodings (with dropout applied). Should be the same shape as `embeddings`.
         """
         # add positional encoding (up to the sequence length) to embeddings
-        return self.dropout(embeddings + self.pos_encoding[:, :embeddings.size(1)])
+        return self.dropout(embeddings + self.pos_encoding[:, :embeddings.shape[1]])

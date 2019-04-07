@@ -60,20 +60,17 @@ class ScaledDotProductAttention(nn.Module):
         Can be used in the Decoder to avoid a position at index ``i`` in the sequence to attend to positions
         at indices > ``i`` -> prevent a leftward information flow which would be illegal in the Decoder.
 
-        :return:
-
-            - Output: Results of attention weights applied to the values. Shape should be (batch_size, seq_length, d_model)
-            - attn_weights: Attention weights. Shape should be (batch_size, seq_length, seq_length)
+        :return: Results of attention weights applied to the values. Shape should be (batch_size, seq_length, d_model)
 
         """
         # get dimension d_k
-        d_k = queries.size(-1)
+        d_k = queries.shape[-1]
 
-        # compute Q * K^^T
+        # compute Q * K^T
         scores = torch.matmul(queries, keys.transpose(-2, -1)) / np.sqrt(d_k)
 
         if mask is not None:
-            scores = scores.masked_fill(mask, -1e9)
+            scores = scores.masked_fill(mask == 0, -1e9)
 
         # get attn weights
         attention_weights = self.softmax(scores)
@@ -117,7 +114,7 @@ class MultiHeadAttention(nn.Module):
 
         :param d_v: Dimensionality of each value (Should correspond to d_model / n_head).
 
-        :param dropout: dropout probability. Default: 0.1.
+        :param dropout: dropout probability. Default: 0.1. Passed to :py:class:`ScaledDotProductAttention`.
 
         """
         # call base constructor
@@ -136,17 +133,11 @@ class MultiHeadAttention(nn.Module):
         self.w_ks = nn.Linear(d_model, n_head * d_k)
         self.w_vs = nn.Linear(d_model, n_head * d_v)
 
-        # not sure if this specific initialization scheme is specified in the paper.
-        # nn.init.normal_(self.w_qs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_k)))
-        # nn.init.normal_(self.w_ks.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_k)))
-        # nn.init.normal_(self.w_vs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_v)))
-
         # instantiate the attention layer
         self.attention = ScaledDotProductAttention(attn_dropout=dropout)
 
         # final output linear layer
         self.fc = nn.Linear(n_head * d_v, d_model)
-        # nn.init.xavier_normal_(self.fc.weight)
 
     def forward(self, queries: Tensor, keys: Tensor, values: Tensor, mask=None) -> Tensor:
         """
