@@ -2,6 +2,7 @@ import os
 import torch
 import logging
 import logging.config
+from time import sleep
 from datetime import datetime
 from torch.utils.data import DataLoader
 
@@ -167,12 +168,15 @@ class Trainer(object):
         self.logger = logging.getLogger(name='Trainer')
 
         # Prepare the output path for logging
-        time_str = '{0:%Y%m%d_%H%M%S}'.format(datetime.now())
-
-        self.log_dir = 'experiments/' + training_problem_name + '/' + time_str + '/'
-
-        # create folder
-        os.makedirs(self.log_dir, exist_ok=False)
+        while True:  # Dirty fix: if log_dir already exists, wait for 1 second and try again
+            try:
+                time_str = '{0:%Y%m%d_%H%M%S}'.format(datetime.now())
+                self.log_dir = 'experiments/' + training_problem_name + '/' + time_str + '/'
+                os.makedirs(self.log_dir, exist_ok=False)
+            except FileExistsError:
+                sleep(1)
+            else:
+                break
 
         # Set log dir and add the handler for the logfile to the logger.
         self.log_file = self.log_dir + 'training.log'
