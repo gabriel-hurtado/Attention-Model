@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 from torch.utils.data import Dataset
-from torch.utils.data.dataloader import default_collate
 
 if torch.cuda.is_available():
     device = torch.device('cuda')

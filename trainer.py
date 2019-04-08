@@ -40,8 +40,6 @@ class Trainer(object):
         self.model = Transformer(params["model"]).to(device)
 
         # instantiate loss
-        # TODO: hardcode -1 as padding token for now, verify with Dataset class later
-
         if "smoothing" in params["training"]:
             self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"],
                                               padding_token=params["dataset"]["pad_token"],
@@ -108,10 +106,10 @@ class Trainer(object):
                     batch.cuda()
 
                 # 2. Perform forward calculation.
-                logits = self.model(batch.src_sequences, None, batch.tgt_sequences, None)
+                logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 3. Evaluate loss function.
-                loss = self.loss_fn(logits, batch.tgt_sequences)
+                loss = self.loss_fn(logits, batch.trg_y)
 
                 # 4. Backward gradient flow.
                 loss.backward()
@@ -135,10 +133,10 @@ class Trainer(object):
                     batch.cuda()
 
                 # 1. Perform forward calculation.
-                logits = self.model(batch.src_sequences, None, batch.tgt_sequences, None)
+                logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 2. Evaluate loss function.
-                loss = self.loss_fn(logits, batch.tgt_sequences)
+                loss = self.loss_fn(logits, batch.trg_y)
 
                 # Log "elementary" statistics - episode and loss.
                 self.logger.info('Validation Set | Loss: {}'.format(loss.item()))
@@ -232,41 +230,41 @@ if __name__ == '__main__':
 
     params = {
         "training": {
-                "epochs": 5,
-                "batch_size": 2,
-                "smoothing": 0.1,
+                "epochs": 10,
+                "batch_size": 30,
+                "smoothing": 0.0,
         },
 
         "optim": {
             "lr": 0.,
             "betas": (0.9, 0.98),
             "eps": 1e-9,
-            "factor": 2,
+            "factor": 1,
             "warmup": 400
 
         },
 
         "dataset": {
-            "pad_token": -1,
+            "pad_token": 0,
 
             'training': {
-                    'max_int': 10,
+                    'max_int': 11,
                     'max_seq_length': 10,
-                    'size': 10000},
+                    'size': 30*20},
 
             'validation': {
-                'max_int': 10,
+                'max_int': 11,
                 'max_seq_length': 10,
-                'size': 1000}
+                'size': 10}
 
         },
 
         "model": {
                 'd_model': 512,
-                'src_vocab_size': 10,
-                'tgt_vocab_size': 10,
+                'src_vocab_size': 11,
+                'tgt_vocab_size': 11,
 
-                'N': 6,
+                'N': 2,
                 'dropout': 0.1,
 
                 'attention': {'n_head': 8,
@@ -281,7 +279,8 @@ if __name__ == '__main__':
     trainer = Trainer(params)
     trainer.train()
 
-    src = torch.Tensor([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]])
+    src = torch.Tensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
+    src_mask = torch.ones(1, 1, 10)
 
-    predictions = trainer.model.greedy_decode(src, None, start_symbol=1)
+    predictions = trainer.model.greedy_decode(src, src_mask, start_symbol=1)
     print(predictions)
