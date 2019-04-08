@@ -54,6 +54,9 @@ class Trainer(object):
         # instantiate optimizer
         self.optimizer = NoamOpt(model=self.model,
                                  model_size=params["model"]["d_model"],
+                                 lr=params["optim"]["lr"],
+                                 betas=params["optim"]["betas"],
+                                 eps=params["optim"]["eps"],
                                  factor=params["optim"]["factor"],
                                  warmup=params["optim"]["warmup"])
 
@@ -235,6 +238,9 @@ if __name__ == '__main__':
         },
 
         "optim": {
+            "lr": 0.,
+            "betas": (0.9, 0.98),
+            "eps": 1e-9,
             "factor": 2,
             "warmup": 400
 
