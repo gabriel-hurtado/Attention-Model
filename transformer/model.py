@@ -135,14 +135,15 @@ class Transformer(nn.Module):
         src_sequences = self.src_embedings(src_sequences.type(LongTensor))
 
         # 2. encoder stack
-        encoder_output = self.encoder(x=src_sequences, mask=src_mask, verbose=False)
+        encoder_output = self.encoder(src=src_sequences, mask=src_mask, verbose=False)
 
         # 3. get subsequent mask to hide subsequent positions in the decoder.
         self_mask = subsequent_mask(trg_sequences.shape[1])
 
         # 3.5 Combine the trg_mask (which hides padding) and self_mask (which hide subsequent positions in the decoder)
         # as one mask
-        hide_padding_and_future_words_mask = trg_mask & self_mask
+
+        hide_padding_and_future_words_mask = trg_mask.type_as(self_mask.data) & self_mask
 
         # 4. embed the output batch
         trg_sequences = self.tgt_embedings(trg_sequences.type(LongTensor))
