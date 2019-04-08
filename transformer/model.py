@@ -104,19 +104,29 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    # pylint: disable=unused-argument
-    def forward(self, src_sequences, src_masks, tgt_sequences, tgt_masks) -> torch.Tensor:
+    def forward(self, src_sequences, src_mask, trg_sequences, trg_mask) -> torch.Tensor:
         """
-        DISCLAIMER: There are missing parts / bugs in this forward for certain.
-        Have to identify & fix them.
+        Main forward pass of the model. Simplified worfklow:
 
-        :param src_sequences: Batch of input sentences. Should be of shape (batch_size, in_seq_len).
+        src_sequences -> Embeddings + Positional Encodings -> Encoder stack -> Memory --|
+                                                                 |----------------------|
+                                                                 v
+        trg_sequences -> Embeddings + Positional Encodings -> Decoder stack -> Classifier -> Logits
 
-        :param  src_masks: Mask, hiding the padding in the input batch. Should be same shape as src_sequences.
 
-        :param tgt_sequences: Batch of output sentences. Should be of shape (batch_size, out_seq_len).
+        :param src_sequences: Batch of tokenized input sentences. Should be of shape (batch_size, in_seq_len).
 
-        :param tgt_masks: Mask, hiding the padding in the output batch. TODO: Shape>
+        :param  src_mask: Mask, hiding the padding in the input batch. Should be same shape as src_sequences.
+
+        :param trg_sequences: Batch of output sentences. Should be of shape (batch_size, out_seq_len).
+
+        :param trg_mask: Mask, hiding the padding in the output batch. Should be the same shape as trg_sequences.
+
+        .. note::
+
+            This mask (which hides padding) will be combined with the `subsequent_mask` which hides subsequent
+            positions in the decoder, to form only one mask.
+
 
         :return: Logits, of shape (batch_size, out_seq_len, d_model)
         """
@@ -125,16 +135,22 @@ class Transformer(nn.Module):
         src_sequences = self.src_embedings(src_sequences.type(LongTensor))
 
         # 2. encoder stack
-        encoder_output = self.encoder(src_sequences)
+        encoder_output = self.encoder(x=src_sequences, mask=src_mask, verbose=False)
 
         # 3. get subsequent mask to hide subsequent positions in the decoder.
-        self_mask = subsequent_mask(tgt_sequences.shape[1])
+        self_mask = subsequent_mask(trg_sequences.shape[1])
+
+        # 3.5 Combine the trg_mask (which hides padding) and self_mask (which hide subsequent positions in the decoder)
+        # as one mask
+        hide_padding_and_future_words_mask = trg_mask & self_mask
 
         # 4. embed the output batch
-        tgt_sequences = self.tgt_embedings(tgt_sequences.type(LongTensor))
+        trg_sequences = self.tgt_embedings(trg_sequences.type(LongTensor))
 
         # 4. decoder stack
-        decoder_output = self.decoder(x=tgt_sequences, memory=encoder_output, self_mask=self_mask, memory_mask=None)
+        decoder_output = self.decoder(x=trg_sequences, memory=encoder_output,
+                                      self_mask=hide_padding_and_future_words_mask,
+                                      memory_mask=src_mask)
 
         # 5. classifier
         logits = self.classifier(decoder_output)
