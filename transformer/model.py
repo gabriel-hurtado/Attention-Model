@@ -160,8 +160,12 @@ class Transformer(nn.Module):
 
     def greedy_decode(self, src: torch.Tensor, src_mask: torch.Tensor, start_symbol=1) -> torch.Tensor:
         """
-        Returns the prediction for `src` using greedy decoding for simplicity.
-        # TODO: documentation
+        Returns the prediction for `src` using greedy decoding for simplicity:
+
+            - Feed `src` (after embedding) in the Encoder to get the "memory",
+            - Feed an initial tensor (filled with start_symbol) in the Decoder, with the "memory" and the appropriate corresponding mask
+            - Get the predictions of the model, makes a max to get the next token, cat it to the previous prediction and iterate
+
 
         :param src: sample for which to produce predictions.
 
@@ -177,7 +181,7 @@ class Transformer(nn.Module):
         embedded = self.src_embedings(src.type(LongTensor))
 
         # 2. Encode embedded inputs
-        memory = self.encoder(x=embedded, mask=src_mask)
+        memory = self.encoder(src=embedded, mask=src_mask)
 
         # 3. Create initial input for decoder
         decoder_in = torch.ones(src.shape[0], 1).type(FloatTensor) * start_symbol
@@ -190,7 +194,7 @@ class Transformer(nn.Module):
             # 5. Go through decoder
             out = self.decoder(x=decoder_in_embed, memory=memory,
                                self_mask=subsequent_mask(decoder_in.shape[1]),
-                               memory_mask=None)
+                               memory_mask=src_mask)
 
             # 6. classifier: TODO: Why only last word?
             logits = self.classifier(out[:, -1])
