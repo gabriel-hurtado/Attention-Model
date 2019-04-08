@@ -90,7 +90,7 @@ class LabelSmoothingLoss(nn.Module):
 
         :param smoothing: Smoothing factor.
         """
-        assert 0.0 < smoothing <= 1.0, "The smoothing factor should be in [0, 1], got {}.".format(smoothing)
+        assert 0.0 <= smoothing <= 1.0, "The smoothing factor should be in [0, 1], got {}.".format(smoothing)
 
         # call base constructor
         super(LabelSmoothingLoss, self).__init__()
@@ -135,7 +135,7 @@ class LabelSmoothingLoss(nn.Module):
         # go through LogSoftmax layer and flatten out the tensors for simplicity
         outputs_log_softmax = self.log_softmax(x)
         outputs_flat = outputs_log_softmax.view(batch_size * seq_len, vocabulary_size)
-        targets_flat = targets.view(batch_size * seq_len)
+        targets_flat = targets.contiguous().view(batch_size * seq_len)
 
         # repeat the smoothed_targets tensor as necessary to match batch size
         smoothed_targets = self.smoothed_targets.repeat(targets_flat.size(0), 1)
