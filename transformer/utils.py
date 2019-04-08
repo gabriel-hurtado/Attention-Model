@@ -30,9 +30,9 @@ def subsequent_mask(size):
     """
     attn_shape = (1, size, size)
     # pylint: disable=no-member
-    subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')  # Upper triangle of an array.
+    subsequent_mask = np.triu(np.ones(attn_shape), k=1)  # Upper triangle of an array.
 
-    return torch.from_numpy(subsequent_mask).float().to(device) == 0
+    return torch.from_numpy(subsequent_mask).to(device) == 0
 
 
 class BColors:
