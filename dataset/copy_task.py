@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import default_collate
 
@@ -43,22 +44,37 @@ class CopyTaskDataset(Dataset):
 
         :return: tuple (inputs, targets) of identical shape.
         """
-
-        sample = torch.randint(low=0, high=self.max_int, size=(self.max_seq_length,), device=device)
-
-        return sample, sample
+        return {}
 
     def collate(self, samples):
-        inputs, targets = default_collate(samples)
 
-        return Batch(inputs, targets)
+        data = torch.from_numpy(np.random.randint(1, self.max_int, size=(len(samples), self.max_seq_length)))
+        data[:, 0] = 1
+
+        return Batch(data, data, 0)
 
 
 class Batch:
-    def __init__(self, src_sequences, tgt_sequences):
-        self.src_sequences = src_sequences
-        self.tgt_sequences = tgt_sequences
+    """
+    Small class which represents a batch, holding the inputs & outputs sequences, and creates the associated batch.
+    """
 
-    def cuda(self):
-        self.src_sequences = self.src_sequences.cuda()
-        self.tgt_sequences = self.tgt_sequences.cuda()
+    def __init__(self, src, trg=None, pad=0):
+        self.src = src
+        self.src_mask = (src != pad).unsqueeze(-2)
+
+        if trg is not None:
+            self.trg = trg[:, :-1]
+            self.trg_y = trg[:, 1:]
+            self.trg_mask = (self.trg != pad).unsqueeze(-2)  # will be ANDed with subsequent_mask(trg.shape[1]) in the forward.
+
+    def cuda(self) -> None:
+        """
+        CUDAify the Batch parameters which can be CUDAified (i.e. tensors).
+
+        """
+        self.src = self.src.cuda()
+        self.src_mask = self.src_mask.cuda()
+        self.trg = self.trg.cuda()
+        self.trg_y = self.trg_y.cuda()
+        self.trg_mask = self.trg_mask.cuda()
