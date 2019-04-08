@@ -15,18 +15,23 @@ def clone(module, N) -> nn.ModuleList:
     """
     Produces ``N`` identical copies of ``module`` and returns them as a ``nn.ModuleList``.
     """
-    return nn.ModuleList((copy.deepcopy(module),) * N)
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
 def subsequent_mask(size):
     """
     Masks out subsequent positions.
+
+    The mask shows the position each tgt word (row) is allowed to look at (column).
+    Words are blocked for attending to future words during training.
+
     :param size: Input size
     :return: Tensor with boolean mask on subsequent position
     """
     attn_shape = (1, size, size)
     # pylint: disable=no-member
-    subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
+    subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')  # Upper triangle of an array.
+
     return torch.from_numpy(subsequent_mask).float().to(device) == 0
 
 

@@ -48,8 +48,6 @@ class ScaledDotProductAttention(nn.Module):
         """
         Implements the forward pass of the ``ScaledDotProductAttention`` class.
 
-        TODO: Should verify the shape of the tensors.
-
         :param queries: Tensor of shape (batch_size, sequence_length, d_k). Represents the queries Q.
 
         :param keys: Tensor of shape (batch_size, sequence_length, d_k). Represents the keys K.
@@ -57,10 +55,14 @@ class ScaledDotProductAttention(nn.Module):
         :param values: Tensor of shape (batch_size, sequence_length, d_v). Represents the values V.
 
         :param mask: If not ``None``, will mask out the values at indexes where ``mask==0`` before the softmax layer.
-        Can be used in the Decoder to avoid a position at index ``i`` in the sequence to attend to positions
-        at indices > ``i`` -> prevent a leftward information flow which would be illegal in the Decoder.
 
-        :return: Results of attention weights applied to the values. Shape should be (batch_size, seq_length, d_model)
+        .. note::
+
+            Can be used in the Decoder to avoid a position at index ``i`` in the sequence to attend to
+            positions at indices > ``i``.
+            -> prevent a leftward information flow which would be illegal in the ``Decoder``.
+
+        :return: Results of attention weights applied to the values. Shape should be (batch_size, seq_length, d_v)
 
         """
         # get dimension d_k
@@ -70,6 +72,8 @@ class ScaledDotProductAttention(nn.Module):
         scores = torch.matmul(queries, keys.transpose(-2, -1)) / np.sqrt(d_k)
 
         if mask is not None:
+            # mask out values at indices where mask is 0 by setting them to a large negative value
+            # Will be normalized to 0 in the softmax layer afterwards
             scores = scores.masked_fill(mask == 0, -1e9)
 
         # get attn weights
@@ -143,21 +147,30 @@ class MultiHeadAttention(nn.Module):
         """
         Implements the forward pass of the ``MultiHeadAttention`` class.
 
-        TODO: Should verify the shape of the tensors.
+        :param queries: Tensor of shape (batch_size, sequence_length, d_model). Represents the queries Q.
 
-        :param queries: Tensor of shape (batch_size, sequence_length, d_k). Represents the queries Q.
+        :param keys: Tensor of shape (batch_size, sequence_length, d_model). Represents the keys K.
 
-        :param keys: Tensor of shape (batch_size, sequence_length, d_k). Represents the keys K.
+        :param values: Tensor of shape (batch_size, sequence_length, d_model). Represents the values V.
 
-        :param values: Tensor of shape (batch_size, sequence_length, d_v). Represents the values V.
+
+        .. note ::
+
+            Q, K, V will be passed into linear layers that reduce their dimensionality from d_model to d_k, d_v resp.
+
+            Yet, for efficiency purposes, we pack Q (resp. K,V) of each attention head as one matrix, of dim d_k * n_head.
+
+            Since, in :py:func:`__init__`, we ensure that d_model % n_head = 0, and that we use d_k = d_v = d_model / n_head,
+
+            the input tensors will have dimension d_model.
 
         :param mask: If not ``None``, will mask out the values at indexes where ``mask==0`` before the softmax layer.
         Can be used in the Decoder to avoid a position at index ``i`` in the sequence to attend to positions
         at indices > ``i`` -> prevent a leftward information flow which would be illegal in the Decoder.
 
-        :return:
-
-            - Output: Results of attention weights applied to the values. Shape should be (batch_size, seq_length, d_model)
+        :return: Results of attention weights applied to the values
+                (linear projection of the concatenation of the output of each head).
+                Shape should be (batch_size, seq_length, d_model).
 
         """
 
@@ -177,6 +190,7 @@ class MultiHeadAttention(nn.Module):
         # 3) Concat using a view.
         x = x.transpose(1, 2).contiguous().view(n_batches, -1, self.n_head * self.d_k)
 
+        # final linear layer
         return self.fc(x)
 
 

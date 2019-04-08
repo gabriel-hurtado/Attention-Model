@@ -90,7 +90,7 @@ class LayerNormalization(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         """
-        Forward pass of the normalization layer.
+        Forward pass of the normalization layer. Normalization done over the last dimension of `x`.
 
         :param x: input tensor to be normalized.
 
@@ -111,7 +111,7 @@ class ResidualConnection(nn.Module):
 
         LayerNorm(x + Sublayer(x))
 
-    Where ``Sublayer()`` is the function implemented by the sublayer (e.g. ``MultiHeadAttention``).
+    Where ``Sublayer()`` is the function implemented by the sublayer (e.g. :py:class:`MultiHeadAttention`).
 
     Dropout is applied to the output of the sublayer before it is added to the sub-layer input and normalized.
 
@@ -136,10 +136,11 @@ class ResidualConnection(nn.Module):
 
     def forward(self, x: Tensor, sublayer: nn.Module) -> Tensor:
         """
-        Apply the residual connection to any ``sublayer`` with the same size.
+        Apply the residual connection to any `sublayer` with the same size.
 
         :param x: Input tensor, which will be fed to the sublayer, then summed with the residual and normalized.
-        :param sublayer: Sublayer class (e.g. ``MultiHeadAttention``).
+
+        :param sublayer: Sublayer class (e.g. :py:class:`MultiHeadAttention`).
 
         :return: Normalized tensor after the residual connection.
         """

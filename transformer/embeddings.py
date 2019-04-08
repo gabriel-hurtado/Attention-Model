@@ -63,8 +63,7 @@ class PositionalEncoding(nn.Module):
 
 
     where pos is the position and i is the dimension. That is, each dimension of the positional encoding corresponds
-    to a sinusoid.
-
+    to a sinusoid.b The wavelengths form a geometric progression from 2π to 10000⋅2π.
 
     In addition, dropout is applied to the sums of the embeddings and the positional encodings in both the
     ``Encoder`` and ``Decoder``.
