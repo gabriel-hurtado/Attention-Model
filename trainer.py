@@ -43,14 +43,19 @@ class Trainer(object):
         # TODO: hardcode -1 as padding token for now, verify with Dataset class later
 
         if "smoothing" in params["training"]:
-            self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"], padding_token=-1, smoothing=params["training"]["smoothing"])
+            self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"],
+                                              padding_token=params["dataset"]["pad_token"],
+                                              smoothing=params["training"]["smoothing"])
             self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(params["training"]["smoothing"]))
         else:
-            self.loss_fn = CrossEntropyLoss(pad_token=-1)
+            self.loss_fn = CrossEntropyLoss(pad_token=params["dataset"]["pad_token"])
             self.logger.info("Using CrossEntropyLoss.")
 
         # instantiate optimizer
-        self.optimizer = NoamOpt(model=self.model, model_size=params["model"]["d_model"], factor=2, warmup=4000)
+        self.optimizer = NoamOpt(model=self.model,
+                                 model_size=params["model"]["d_model"],
+                                 factor=params["optim"]["factor"],
+                                 warmup=params["optim"]["warmup"])
 
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
@@ -61,7 +66,8 @@ class Trainer(object):
                                                 size=params["dataset"]["training"]["size"])
 
         # initialize DataLoader
-        self.training_dataloader = DataLoader(dataset=self.training_dataset, batch_size=params["training"]["batch_size"],
+        self.training_dataloader = DataLoader(dataset=self.training_dataset,
+                                              batch_size=params["training"]["batch_size"],
                                               shuffle=False, num_workers=0,
                                               collate_fn=self.training_dataset.collate)
 
@@ -71,7 +77,8 @@ class Trainer(object):
                                                   size=params["dataset"]["validation"]["size"])
 
         # initialize Validation DataLoader
-        self.validation_dataloader = DataLoader(dataset=self.validation_dataset, batch_size=len(self.validation_dataset),
+        self.validation_dataloader = DataLoader(dataset=self.validation_dataset,
+                                                batch_size=len(self.validation_dataset),
                                                 shuffle=False, num_workers=0,
                                                 collate_fn=self.validation_dataset.collate)
 
@@ -172,18 +179,25 @@ class Trainer(object):
         self.log_dir = 'experiments/' + training_problem_name + '/' + time_str + '/'
 
         os.makedirs(self.log_dir, exist_ok=False)
+        self.logger.info('Folder {} created.'.format(self.log_dir))
 
         # Set log dir and add the handler for the logfile to the logger.
         self.log_file = self.log_dir + 'training.log'
         self.add_file_handler_to_logger(self.log_file)
 
+        self.logger.info('Log File {} created.'.format(self.log_file))
+
         # Models dir: to store the trained models.
         self.model_dir = self.log_dir + 'models/'
         os.makedirs(self.model_dir, exist_ok=False)
 
+        self.logger.info('Model folder {} created.'.format(self.model_dir))
+
         # save the configuration as a json file in the experiments dir
         with open(self.log_dir + 'params.json', 'w') as fp:
             json.dump(params, fp)
+
+        self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
 
     def add_file_handler_to_logger(self, logfile: str) -> None:
         """
@@ -217,10 +231,18 @@ if __name__ == '__main__':
         "training": {
                 "epochs": 5,
                 "batch_size": 2,
-                "smoothing": 0.1
+                "smoothing": 0.1,
+        },
+
+        "optim": {
+            "factor": 2,
+            "warmup": 400
+
         },
 
         "dataset": {
+            "pad_token": -1,
+
             'training': {
                     'max_int': 10,
                     'max_seq_length': 10,
