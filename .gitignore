@@ -258,7 +258,7 @@ $RECYCLE.BIN/
 .idea/misc.xml
 
 # Notebook Export
-presentation.html
+webpages/*/*.html
 
 # Dataset local cache
 resources/torchtext
