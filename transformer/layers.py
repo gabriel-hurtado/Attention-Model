@@ -5,6 +5,12 @@ import torch.nn.functional as F
 
 from transformer.attention import MultiHeadAttention
 
+# if CUDA available, moves computations to GPU
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+
 
 class PositionwiseFeedForward(nn.Module):
     """
@@ -18,7 +24,6 @@ class PositionwiseFeedForward(nn.Module):
 
 
     """
-    "Implements FFN equation."
 
     def __init__(self, d_model: int, d_ff: int, dropout=0.1):
         """
@@ -28,7 +33,7 @@ class PositionwiseFeedForward(nn.Module):
 
         :param d_ff: Hidden layer size (should be 2048).
 
-        :param dropout: dropout probability. Default is 0.1
+        :param dropout: In-betweeen layers dropout probability. Default is 0.1.
 
         """
         # call base constructor
@@ -77,21 +82,21 @@ class LayerNormalization(nn.Module):
         """
         super(LayerNormalization, self).__init__()
 
-        # instantiate the learnable parameters.
-        self.a_2 = nn.Parameter(torch.ones(size))
-        self.b_2 = nn.Parameter(torch.zeros(size))
+        # instantiate the learnable parameters, with appropriate device
+        self.a_2 = nn.Parameter(torch.ones(size, device=device))
+        self.b_2 = nn.Parameter(torch.zeros(size, device=device))
 
         self.eps = eps
 
     def forward(self, x: Tensor) -> Tensor:
         """
-        Forward pass of the normalization layer.
+        Forward pass of the normalization layer. Normalization done over the last dimension of `x`.
 
         :param x: input tensor to be normalized.
 
         :return: normalized x.
         """
-        mean, std = x.mean(-1, keepdim=True), x.std(-1, keepdim=True)
+        mean, std = x.mean(dim=-1, keepdim=True), x.std(dim=-1, keepdim=True)
 
         return self.a_2 * (x - mean) / (std + self.eps) + self.b_2
 
@@ -106,7 +111,7 @@ class ResidualConnection(nn.Module):
 
         LayerNorm(x + Sublayer(x))
 
-    Where ``Sublayer()`` is the function implemented by the sublayer (e.g. ``MultiHeadAttention``).
+    Where ``Sublayer()`` is the function implemented by the sublayer (e.g. :py:class:`MultiHeadAttention`).
 
     Dropout is applied to the output of the sublayer before it is added to the sub-layer input and normalized.
 
@@ -131,10 +136,11 @@ class ResidualConnection(nn.Module):
 
     def forward(self, x: Tensor, sublayer: nn.Module) -> Tensor:
         """
-        Apply the residual connection to any ``sublayer`` with the same size.
+        Apply the residual connection to any `sublayer` with the same size.
 
         :param x: Input tensor, which will be fed to the sublayer, then summed with the residual and normalized.
-        :param sublayer: Sublayer class (e.g. ``MultiHeadAttention``).
+
+        :param sublayer: Sublayer class (e.g. :py:class:`MultiHeadAttention`).
 
         :return: Normalized tensor after the residual connection.
         """
