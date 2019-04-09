@@ -34,14 +34,29 @@ style check:
     - develop
     - merge_requests
 
-deliverables:
+checkin deliverables:
   stage: deploy
   before_script:
     - pip install nbconvert
   script:
-    - jupyter nbconvert --to html presentation.ipynb --template full --output index
+    - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --template full --output index
+    - mkdir -p progress_checkin
+    - mv webpages/progress_checkin/index.html progress_checkin/index.html
+  artifacts:
+    name: "check-in_gradescope_upload"
+    paths:
+      - progress_checkin
+  only:
+    - master
+
+final deliverables:
+  stage: deploy
+  before_script:
+    - pip install nbconvert
+  script:
+    - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --template full --output index
     - mkdir -p project_webpage/project_webpage
-    - mv index.html project_webpage/project_webpage/index.html
+    - mv webpages/project_webpage/index.html project_webpage/project_webpage/index.html
   artifacts:
     name: "gradescope_upload"
     paths:
@@ -54,11 +69,14 @@ pages:
   before_script:
     - pip install nbconvert
   script:
-    - jupyter nbconvert --to html presentation.ipynb --template full --output index
+    - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --template full --output index
+    - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --template full --output index
     - mkdir public
-    - mv index.html public/index.html
+    - mv webpages/project_webpage/index.html public/index.html
+    - mv webpages/progress_checkin/index.html public/progress.html
   artifacts:
     paths:
       - public
   only:
     - master
+    - feature/project-checkin
