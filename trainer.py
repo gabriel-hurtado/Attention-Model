@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from transformer.model import Transformer
 from training.optimizer import NoamOpt
 from training.loss import LabelSmoothingLoss, CrossEntropyLoss
+from training.statistics_collector import StatisticsCollector
 from dataset.copy_task import CopyTaskDataset
 
 
@@ -224,6 +225,68 @@ class Trainer(object):
 
         # add the handler to the logger
         self.logger.addHandler(fh)
+
+    def initialize_statistics_collection(self) -> None:
+        """
+        Initializes 2 :py:class:`StatisticsCollector` to track statistics for training and validation.
+
+        Adds some default statistics, such as the loss, episode idx and the epoch idx.
+
+        Also creates the output files (csv).
+        """
+        # TRAINING.
+        # Create statistics collector for training.
+        self.training_stat_col = StatisticsCollector()
+
+        # add default statistics
+        self.training_stat_col.add_statistic('epoch', '{:02d}')
+        self.training_stat_col.add_statistic('loss', '{:12.10f}')
+        self.training_stat_col.add_statistic('episode', '{:06d}')
+
+        # Create the csv file to store the training statistics.
+        self.training_batch_stats_file = self.training_stat_col.initialize_csv_file(self.log_dir,
+                                                                                    'training_statistics.csv')
+
+        # VALIDATION.
+        # Create statistics collector for validation.
+        self.validation_stat_col = StatisticsCollector()
+
+        # add default statistics
+        self.validation_stat_col.add_statistic('epoch', '{:02d}')
+        self.validation_stat_col.add_statistic('loss', '{:12.10f}')
+        self.validation_stat_col.add_statistic('episode', '{:06d}')
+
+        # Create the csv file to store the validation statistics.
+        self.validation_batch_stats_file = self.validation_stat_col.initialize_csv_file(self.log_dir,
+                                                                                        'validation_statistics.csv')
+
+    def finalize_statistics_collection(self) -> None:
+        """
+        Finalizes the statistics collection by closing the csv files.
+        """
+        # Close all files.
+        self.training_batch_stats_file.close()
+        self.validation_batch_stats_file.close()
+
+    def initialize_tensorboard(self) -> None:
+        """
+        Initializes the TensorBoard writers, and log directories.
+        """
+        from tensorboardX import SummaryWriter
+
+        self.training_writer = SummaryWriter(self.log_dir + '/training')
+        self.training_stat_col.initialize_tensorboard(self.training_writer)
+
+        self.validation_writer = SummaryWriter(self.log_dir + '/validation')
+        self.validation_stat_col.initialize_tensorboard(self.validation_writer)
+
+    def finalize_tensorboard(self):
+        """
+        Finalizes the operation of TensorBoard writers by closing them.
+        """
+        # Close the TensorBoard writers.
+        self.training_writer.close()
+        self.validation_writer.close()
 
 
 if __name__ == '__main__':
