@@ -39,7 +39,7 @@ checkin deliverables:
   before_script:
     - pip install nbconvert
   script:
-    - jupyter nbconvert --to html webpages/progress_checkin/presentation.ipynb --template full --output index
+    - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --template full --output index
     - mkdir -p progress_checkin
     - mv webpages/progress_checkin/index.html progress_checkin/index.html
   artifacts:
@@ -70,7 +70,7 @@ pages:
     - pip install nbconvert
   script:
     - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --template full --output index
-    - jupyter nbconvert --to html webpages/progress_checkin/presentation.ipynb --template full --output index
+    - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --template full --output index
     - mkdir public
     - mv webpages/project_webpage/index.html public/index.html
     - mv webpages/progress_checkin/index.html public/progress.html
