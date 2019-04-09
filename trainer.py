@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from transformer.model import Transformer
 from training.optimizer import NoamOpt
 from training.loss import LabelSmoothingLoss, CrossEntropyLoss
+from training.statistics_collector import StatisticsCollector
 from dataset.copy_task import CopyTaskDataset
 
 
@@ -35,6 +36,10 @@ class Trainer(object):
 
         # configure all logging
         self.configure_logging(training_problem_name="copy_task", params=params)
+
+        # Initialize TensorBoard and statistics collection.
+        self.initialize_statistics_collection()
+        self.initialize_tensorboard()
 
         # instantiate model
         self.model = Transformer(params["model"]).to(device)
@@ -93,10 +98,23 @@ class Trainer(object):
             - Logs statistics to logger for every batch per epoch
 
         """
+        # Reset the counter.
+        episode = -1
+
         for epoch in range(self.epochs):
+
+            # Empty the statistics collector.
+            self.training_stat_col.empty()
+
+            # collect epoch index
+            self.training_stat_col['epoch'] = epoch + 1
+            self.validation_stat_col['epoch'] = epoch + 1
 
             self.model.train()
             for i, batch in enumerate(self.training_dataloader):
+
+                # "Move on" to the next episode.
+                episode += 1
 
                 # 1. reset all gradients
                 self.optimizer.zero_grad()
@@ -114,8 +132,17 @@ class Trainer(object):
                 # 4. Backward gradient flow.
                 loss.backward()
 
-                # Log "elementary" statistics - episode and loss.
-                self.logger.info('Epoch: {} | Episode: {} | Loss: {}'.format(epoch, i, loss.item()))
+                # 4.1. Export to csv - at every step.
+                # collect loss, episode
+                self.training_stat_col['loss'] = loss.item()
+                self.training_stat_col['episode'] = episode
+                self.training_stat_col.export_to_csv()
+
+                # 4.2. Log "elementary" statistics - episode and loss.
+                self.logger.info(self.training_stat_col.export_to_string())
+
+                # 4.3 Exports to tensorboard
+                self.training_stat_col.export_to_tensorboard()
 
                 # 5. Perform optimization.
                 self.optimizer.step()
@@ -138,8 +165,21 @@ class Trainer(object):
                 # 2. Evaluate loss function.
                 loss = self.loss_fn(logits, batch.trg_y)
 
-                # Log "elementary" statistics - episode and loss.
-                self.logger.info('Validation Set | Loss: {}'.format(loss.item()))
+                # 3.1. Export to csv - at every step.
+                # collect loss, episode
+                self.validation_stat_col['loss'] = loss.item()
+                self.validation_stat_col['episode'] = episode
+                self.validation_stat_col.export_to_csv()
+
+                # 3.2 Log "elementary" statistics - episode and loss.
+                self.logger.info(self.training_stat_col.export_to_string('[Validation]'))
+
+                # 3.3 Export to Tensorboard
+                self.validation_stat_col.export_to_tensorboard()
+
+        # training done, end statistics collection
+        self.finalize_statistics_collection()
+        self.finalize_tensorboard()
 
     def configure_logging(self, training_problem_name: str, params: dict) -> None:
         """
@@ -224,6 +264,68 @@ class Trainer(object):
 
         # add the handler to the logger
         self.logger.addHandler(fh)
+
+    def initialize_statistics_collection(self) -> None:
+        """
+        Initializes 2 :py:class:`StatisticsCollector` to track statistics for training and validation.
+
+        Adds some default statistics, such as the loss, episode idx and the epoch idx.
+
+        Also creates the output files (csv).
+        """
+        # TRAINING.
+        # Create statistics collector for training.
+        self.training_stat_col = StatisticsCollector()
+
+        # add default statistics
+        self.training_stat_col.add_statistic('epoch', '{:02d}')
+        self.training_stat_col.add_statistic('loss', '{:12.10f}')
+        self.training_stat_col.add_statistic('episode', '{:06d}')
+
+        # Create the csv file to store the training statistics.
+        self.training_batch_stats_file = self.training_stat_col.initialize_csv_file(self.log_dir,
+                                                                                    'training_statistics.csv')
+
+        # VALIDATION.
+        # Create statistics collector for validation.
+        self.validation_stat_col = StatisticsCollector()
+
+        # add default statistics
+        self.validation_stat_col.add_statistic('epoch', '{:02d}')
+        self.validation_stat_col.add_statistic('loss', '{:12.10f}')
+        self.validation_stat_col.add_statistic('episode', '{:06d}')
+
+        # Create the csv file to store the validation statistics.
+        self.validation_batch_stats_file = self.validation_stat_col.initialize_csv_file(self.log_dir,
+                                                                                        'validation_statistics.csv')
+
+    def finalize_statistics_collection(self) -> None:
+        """
+        Finalizes the statistics collection by closing the csv files.
+        """
+        # Close all files.
+        self.training_batch_stats_file.close()
+        self.validation_batch_stats_file.close()
+
+    def initialize_tensorboard(self) -> None:
+        """
+        Initializes the TensorBoard writers, and log directories.
+        """
+        from tensorboardX import SummaryWriter
+
+        self.training_writer = SummaryWriter(self.log_dir + '/training')
+        self.training_stat_col.initialize_tensorboard(self.training_writer)
+
+        self.validation_writer = SummaryWriter(self.log_dir + '/validation')
+        self.validation_stat_col.initialize_tensorboard(self.validation_writer)
+
+    def finalize_tensorboard(self):
+        """
+        Finalizes the operation of TensorBoard writers by closing them.
+        """
+        # Close the TensorBoard writers.
+        self.training_writer.close()
+        self.validation_writer.close()
 
 
 if __name__ == '__main__':
