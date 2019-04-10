@@ -37,12 +37,14 @@ class IWSLTDatasetBuilder():
         Initializes an iterator over the IWSLT dataset.
         The iterator then yields batches of size `batch_size`.
 
+        Returns the iterator alongside the size of the input & output vocabs.
+
         Example:
 
-        >>> dataset_iterator = IWSLTDatasetBuilder.build(language_pair=language_pair,
-        ...                                              split=Split.Train,
-        ...                                              max_length=5,
-        ...                                              batch_size=batch_size)
+        >>> dataset_iterator, src_vocab_size, trg_vocab_size = IWSLTDatasetBuilder.build(language_pair=language_pair,
+        ...                                                                              split=Split.Train,
+        ...                                                                              max_length=5,
+        ...                                                                              batch_size=batch_size)
         >>> batch = next(iter(dataset_iterator))
 
         :param language_pair: The language pair for which to create a vocabulary.
@@ -87,4 +89,4 @@ class IWSLTDatasetBuilder():
                     sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
                 )
             )
-        )
+        ), len(source_field.vocab), len(target_field.vocab)
