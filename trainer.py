@@ -4,13 +4,14 @@ import torch
 import logging
 import logging.config
 from datetime import datetime
-from torch.utils.data import DataLoader
 
 from transformer.model import Transformer
 from training.optimizer import NoamOpt
 from training.loss import LabelSmoothingLoss, CrossEntropyLoss
 from training.statistics_collector import StatisticsCollector
-from dataset.copy_task import CopyTaskDataset
+from dataset.iwslt import IWSLTDatasetBuilder
+from dataset.language_pairs import LanguagePair
+from dataset.utils import Split
 
 
 class Trainer(object):
@@ -41,17 +42,53 @@ class Trainer(object):
         self.initialize_statistics_collection()
         self.initialize_tensorboard()
 
-        # instantiate model
+        # initialize training Dataset class
+        self.logger.info("Creating the training & validation dataset, may take some time...")
+        self.training_dataset, self.src_vocab_size, self.trg_vocab_size, self.src_padding, self.trg_padding = \
+            IWSLTDatasetBuilder.build(
+                language_pair=LanguagePair.fr_en,
+                split=Split.Train,
+                max_length=params["dataset"]["max_seq_length"],
+                min_freq=params["dataset"]["min_freq"],
+                start_token=params["dataset"]["start_token"],
+                eos_token=params["dataset"]["eos_token"],
+                blank_token=params["dataset"]["pad_token"],
+                batch_size=params["training"]["train_batch_size"])
+
+        # just for safety, assert that the padding token of the source vocab is equal to the target one (for now)
+        assert self.src_padding == self.trg_padding, "the padding token ({}) for the source vocab is not equal" \
+                                                     "to the one from the target vocab ({}).".format(self.src_padding,
+                                                                                                     self.trg_padding)
+
+        # initialize validation Dataset class
+        self.validation_dataset, _, _, _, _ = IWSLTDatasetBuilder.build(
+            language_pair=LanguagePair.fr_en,
+            split=Split.Validation,
+            max_length=params["dataset"]["max_seq_length"],
+            min_freq=params["dataset"]["min_freq"],
+            start_token=params["dataset"]["start_token"],
+            eos_token=params["dataset"]["eos_token"],
+            blank_token=params["dataset"]["pad_token"],
+            batch_size=params["training"]["valid_batch_size"])
+
+        self.logger.info("Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
+                         .format(self.src_vocab_size, self.trg_vocab_size))
+
+        # pass the size of input & output vocabs to model's params
+        params["model"]["src_vocab_size"] = self.src_vocab_size
+        params["model"]["tgt_vocab_size"] = self.trg_vocab_size
+
+        # can now instantiate model
         self.model = Transformer(params["model"]).to(device)
 
         # instantiate loss
         if "smoothing" in params["training"]:
-            self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"],
-                                              padding_token=params["dataset"]["pad_token"],
+            self.loss_fn = LabelSmoothingLoss(size=self.trg_vocab_size,
+                                              padding_token=self.src_padding,
                                               smoothing=params["training"]["smoothing"])
             self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(params["training"]["smoothing"]))
         else:
-            self.loss_fn = CrossEntropyLoss(pad_token=params["dataset"]["pad_token"])
+            self.loss_fn = CrossEntropyLoss(pad_token=self.src_padding)
             self.logger.info("Using CrossEntropyLoss.")
 
         # instantiate optimizer
@@ -65,28 +102,6 @@ class Trainer(object):
 
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
-
-        # initialize training Dataset class
-        self.training_dataset = CopyTaskDataset(max_int=params["dataset"]["training"]["max_int"],
-                                                max_seq_length=params["dataset"]["training"]["max_seq_length"],
-                                                size=params["dataset"]["training"]["size"])
-
-        # initialize DataLoader
-        self.training_dataloader = DataLoader(dataset=self.training_dataset,
-                                              batch_size=params["training"]["batch_size"],
-                                              shuffle=False, num_workers=0,
-                                              collate_fn=self.training_dataset.collate)
-
-        # initialize validation Dataset class
-        self.validation_dataset = CopyTaskDataset(max_int=params["dataset"]["validation"]["max_int"],
-                                                  max_seq_length=params["dataset"]["validation"]["max_seq_length"],
-                                                  size=params["dataset"]["validation"]["size"])
-
-        # initialize Validation DataLoader
-        self.validation_dataloader = DataLoader(dataset=self.validation_dataset,
-                                                batch_size=len(self.validation_dataset),
-                                                shuffle=False, num_workers=0,
-                                                collate_fn=self.validation_dataset.collate)
 
         self.logger.info('Experiment setup done.')
 
@@ -111,7 +126,7 @@ class Trainer(object):
             self.validation_stat_col['epoch'] = epoch + 1
 
             self.model.train()
-            for i, batch in enumerate(self.training_dataloader):
+            for i, batch in enumerate(self.training_dataset):
 
                 # "Move on" to the next episode.
                 episode += 1
@@ -127,7 +142,7 @@ class Trainer(object):
                 logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 3. Evaluate loss function.
-                loss = self.loss_fn(logits, batch.trg_y)
+                loss = self.loss_fn(logits, batch.trg_shifted)
 
                 # 4. Backward gradient flow.
                 loss.backward()
@@ -153,7 +168,7 @@ class Trainer(object):
 
             # validate the model on the validation set
             self.model.eval()
-            for batch in self.validation_dataloader:
+            for batch in self.validation_dataset:
 
                 # Convert batch to CUDA.
                 if torch.cuda.is_available():
@@ -163,7 +178,7 @@ class Trainer(object):
                 logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 2. Evaluate loss function.
-                loss = self.loss_fn(logits, batch.trg_y)
+                loss = self.loss_fn(logits, batch.trg_shifted)
 
                 # 3.1. Export to csv - at every step.
                 # collect loss, episode
@@ -332,9 +347,10 @@ if __name__ == '__main__':
 
     params = {
         "training": {
-                "epochs": 10,
-                "batch_size": 30,
-                "smoothing": 0.0,
+            "epochs": 10,
+            "train_batch_size": 32,
+            "valid_batch_size": 32,
+            "smoothing": 0.0,
         },
 
         "optim": {
@@ -347,35 +363,28 @@ if __name__ == '__main__':
         },
 
         "dataset": {
-            "pad_token": 0,
-
-            'training': {
-                    'max_int': 11,
-                    'max_seq_length': 10,
-                    'size': 30*20},
-
-            'validation': {
-                'max_int': 11,
-                'max_seq_length': 10,
-                'size': 10}
+            "max_seq_length": 7,
+            "min_freq": 2,
+            "start_token": "<s>",
+            "eos_token": "</s>",
+            "pad_token": "<pad>"
 
         },
 
         "model": {
-                'd_model': 512,
-                'src_vocab_size': 11,
-                'tgt_vocab_size': 11,
+            'd_model': 512,
+            'N': 6,
+            'dropout': 0.1,
 
-                'N': 2,
-                'dropout': 0.1,
+            'attention': {
+                'n_head': 8,
+                'd_k': 64,
+                'd_v': 64,
+                'dropout': 0.1},
 
-                'attention': {'n_head': 8,
-                              'd_k': 64,
-                              'd_v': 64,
-                              'dropout': 0.1},
-
-                'feed-forward': {'d_ff': 2048,
-                                 'dropout': 0.1}
+            'feed-forward': {
+                'd_ff': 2048,
+                'dropout': 0.1}
         }
     }
     trainer = Trainer(params)
