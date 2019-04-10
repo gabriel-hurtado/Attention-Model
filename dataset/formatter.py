@@ -42,9 +42,9 @@ class BatchMasker(Batch):
         self.trg = None  # type: Optional[Tensor]
         self.trg_mask = None  # type: Optional[Tensor]
         self.trg_shifted = None  # type: Optional[Tensor]
-        if self.trg is not None:
-            self.trg = self.trg[:-1, :]
-            self.trg_shifted = self.trg[1:, :]  # type: Tensor
+        if self.batch.trg is not None:
+            self.trg = self.batch.trg[:-1, :]
+            self.trg_shifted = self.batch.trg[1:, :]  # type: Tensor
             # create mask to hide padding and future words (subsequent)
             self.trg_mask = self.make_std_mask(self.trg, trg_padding)
             # ntokens is the size of the sentence (excluding padding)
