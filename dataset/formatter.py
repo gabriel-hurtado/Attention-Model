@@ -105,6 +105,17 @@ class BatchMasker(Batch):
 
         return target_mask
 
+    def cuda(self) -> None:
+        """
+        Moves Tensors to CUDA.
+        """
+
+        self.src.cuda()
+        self.src_mask.cuda()
+        self.trg.cuda()
+        self.trg_mask.cuda()
+        self.trg_shifted.cuda()
+
 
 class Formater(Europarl):
     def __init__(self, language: LanguagePair, split: Split, split_size=0.6, pad=0):
