@@ -52,8 +52,8 @@ class BatchMasker(Batch):
         self.trg_shifted = None  # type: Optional[Tensor]
 
         if self.batch.trg is not None:
-            self.trg = self.batch.trg[:-1, :]
-            self.trg_shifted = self.batch.trg[1:, :]  # type: Tensor
+            self.trg = self.batch.trg[:, :-1]
+            self.trg_shifted = self.batch.trg[:, 1:]  # type: Tensor
 
             # create mask to hide padding AND future words (subsequent)
             self.trg_mask = self.make_std_mask(self.trg, trg_padding)
