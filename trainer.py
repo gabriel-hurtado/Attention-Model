@@ -168,7 +168,8 @@ class Trainer(object):
 
             # validate the model on the validation set
             self.model.eval()
-            for batch in self.validation_dataset:
+            val_loss = 0
+            for i, batch in enumerate(self.validation_dataset):
 
                 # Convert batch to CUDA.
                 if torch.cuda.is_available():
@@ -180,17 +181,21 @@ class Trainer(object):
                 # 2. Evaluate loss function.
                 loss = self.loss_fn(logits, batch.trg_shifted)
 
-                # 3.1. Export to csv - at every step.
-                # collect loss, episode
-                self.validation_stat_col['loss'] = loss.item()
-                self.validation_stat_col['episode'] = episode
-                self.validation_stat_col.export_to_csv()
+                val_loss += loss.item()
 
-                # 3.2 Log "elementary" statistics - episode and loss.
-                self.logger.info(self.training_stat_col.export_to_string('[Validation]'))
+            # 3.1. Export to csv.
+            # collect loss, episode
+            self.validation_stat_col['loss'] = val_loss / (i + 1)
+            self.validation_stat_col['episode'] = episode
+            self.validation_stat_col.export_to_csv()
 
-                # 3.3 Export to Tensorboard
-                self.validation_stat_col.export_to_tensorboard()
+            # 3.2 Log "elementary" statistics - episode and loss.
+            self.logger.info(self.training_stat_col.export_to_string('[Validation]'))
+
+            # 3.3 Export to Tensorboard
+            self.validation_stat_col.export_to_tensorboard()
+
+            self.validation_stat_col.empty()
 
         # training done, end statistics collection
         self.finalize_statistics_collection()
