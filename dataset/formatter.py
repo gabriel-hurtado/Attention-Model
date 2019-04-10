@@ -2,7 +2,6 @@ from typing import Optional
 
 import numpy as np
 from torch import Tensor
-from torch.autograd import Variable
 from torchtext.data import Batch, Dataset, Field
 
 from dataset.europarl import Europarl, Split
@@ -18,11 +17,20 @@ class BatchMasker(Batch):
     def __init__(self, batch: Batch, padding_token: str = "<blank>"):
         """
         Constructs a batch masker.
-        The batch must have two fields: 'src' and 'trg', respectively the
-        source and target masks.
+
+        Takes in a batch, which must have two fields: 'src' and 'trg', and creates the
+        source and target masks respectively.
+
+        The created :py:class:`BatchMasker` will thus have the following attributes:
+
+            - `src`: the source sequences (e.g. tokenized input sentences),
+            - `trg`: the target sequences (e.g. tokenized output sentences),
+            - `src_mask`: Mask hiding the padding in `src`
+            - `trg_mask`: Mask hiding both the padding and the subsequent positions in `trg`,
+            - `trg_shifted`: Shifted-by-1 targets.
 
         :param batch: The batch to mask out.
-        :param padding_token: The token used to pad that must be
+        :param padding_token: The token used to pad shorter sequences.
         """
         super().__init__()
         self.batch = batch
@@ -42,11 +50,14 @@ class BatchMasker(Batch):
         self.trg = None  # type: Optional[Tensor]
         self.trg_mask = None  # type: Optional[Tensor]
         self.trg_shifted = None  # type: Optional[Tensor]
-        if self.trg is not None:
-            self.trg = self.trg[:-1, :]
-            self.trg_shifted = self.trg[1:, :]  # type: Tensor
-            # create mask to hide padding and future words (subsequent)
+
+        if self.batch.trg is not None:
+            self.trg = self.batch.trg[:-1, :]
+            self.trg_shifted = self.batch.trg[1:, :]  # type: Tensor
+
+            # create mask to hide padding AND future words (subsequent)
             self.trg_mask = self.make_std_mask(self.trg, trg_padding)
+
             # ntokens is the size of the sentence (excluding padding)
             self.ntokens = (self.trg_shifted != trg_padding).data.sum()
 
@@ -75,13 +86,23 @@ class BatchMasker(Batch):
         return self.batch.target_fields
 
     @staticmethod
-    def make_std_mask(target, pad):
-        """Creates a mask to hide padding and future words."""
+    def make_std_mask(target: Tensor, pad) -> Tensor:
+        """
+        Create a mask for `target` hiding both the padding (specified by `pad`) and the subsequent words
+        (prevent token at position i to attend to positions > i).
+
+        :param target: Tensor to create a mask for.
+
+        :param pad: token corresponding to padding elements.
+
+        :return: Mask hiding both padding and subsequent elements in target.
+        """
         # hide padding
         target_mask = (target != pad).unsqueeze(-2)
+
         # hide padding and future words
-        target_mask = (target_mask &
-                       Variable(subsequent_mask(target.size(-1)).type_as(target_mask.data)))
+        target_mask = target_mask & subsequent_mask(target.shape[-1]).type_as(target_mask.data)
+
         return target_mask
 
 

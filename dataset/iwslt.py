@@ -4,12 +4,18 @@ from torch.utils import data
 from torchtext import data, datasets
 
 from dataset.europarl import Split
+from dataset.formatter import BatchMasker
 from dataset.language_pairs import LanguagePair
 
 ROOT_DATASET_DIR = "resources/torchtext"
 
 
 class IWSLTDatasetBuilder():
+    @staticmethod
+    def masked(batch_iterator: Iterable[data.Batch]):
+        for batch in batch_iterator:
+            yield BatchMasker(batch)
+
     @staticmethod
     def transposed(batch_iterator: Iterable[data.Batch]):
         """
@@ -32,6 +38,7 @@ class IWSLTDatasetBuilder():
         The iterator then yields batches of size `batch_size`.
 
         Example:
+
         >>> dataset_iterator = IWSLTDatasetBuilder.build(language_pair=language_pair,
         ...                                              split=Split.Train,
         ...                                              max_length=5,
@@ -73,9 +80,11 @@ class IWSLTDatasetBuilder():
 
         source_field.build_vocab(train, min_freq=min_freq)  # Build vocabulary on training set
         target_field.build_vocab(train, min_freq=min_freq)
-        return IWSLTDatasetBuilder.transposed(
-            data.BucketIterator(
-                dataset=dataset, batch_size=batch_size,
-                sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
+        return IWSLTDatasetBuilder.masked(
+            IWSLTDatasetBuilder.transposed(
+                data.BucketIterator(
+                    dataset=dataset, batch_size=batch_size,
+                    sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
+                )
             )
         )
