@@ -208,8 +208,8 @@ class StatisticsCollector(Mapping):
 
         # If it is still None - raise error
         if tb_writer is None:
-            raise NotImplemented('Not Tensorboard writer found. Please pass one with tb_writer or '
-                                 'instantiate one with initialize_tensorboard(self, tb_writer: SummaryWriter).')
+            raise NotImplementedError('Not Tensorboard writer found. Please pass one with tb_writer or '
+                                      'instantiate one with initialize_tensorboard(self, tb_writer: SummaryWriter).')
 
         # Iterate through keys and values and concatenate them.
         for key, value in self.statistics.items():
