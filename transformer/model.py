@@ -218,7 +218,7 @@ class Transformer(nn.Module):
         translation = ""
         for i in range(1, decoder_in.shape[1]):
             sym = trg_vocab.itos[decoder_in[i]]
-            if sym == "</s>": break
+            if sym == trg_vocab.stoi[stop_symbol]: break
             translation += sym + " "
 
         # 10. return prediction
