@@ -55,7 +55,7 @@ class Trainer(object):
                 blank_token=params["dataset"]["pad_token"],
                 batch_size=params["training"]["train_batch_size"])
 
-        # just for safety, assert that the padding token of the source vocab is equal to the target one (for now)
+        # just for safety, asuume that the padding token of the source vocab is always equal to the target one (for now)
         assert self.src_padding == self.trg_padding, "the padding token ({}) for the source vocab is not equal" \
                                                      "to the one from the target vocab ({}).".format(self.src_padding,
                                                                                                      self.trg_padding)
@@ -118,14 +118,17 @@ class Trainer(object):
 
         for epoch in range(self.epochs):
 
-            # Empty the statistics collector.
+            # Empty the statistics collectors.
             self.training_stat_col.empty()
+            self.validation_stat_col.empty()
 
             # collect epoch index
             self.training_stat_col['epoch'] = epoch + 1
             self.validation_stat_col['epoch'] = epoch + 1
 
+            # ensure train mode for the model
             self.model.train()
+
             for i, batch in enumerate(self.training_dataset):
 
                 # "Move on" to the next episode.
@@ -138,7 +141,7 @@ class Trainer(object):
                 if torch.cuda.is_available():
                     batch.cuda()
 
-                # 2. Perform forward calculation.
+                # 2. Perform forward pass.
                 logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 3. Evaluate loss function.
@@ -153,13 +156,13 @@ class Trainer(object):
                 self.training_stat_col['episode'] = episode
                 self.training_stat_col.export_to_csv()
 
-                # 4.2. Log "elementary" statistics - episode and loss.
+                # 4.2. Exports statistics to the logger.
                 self.logger.info(self.training_stat_col.export_to_string())
 
                 # 4.3 Exports to tensorboard
                 self.training_stat_col.export_to_tensorboard()
 
-                # 5. Perform optimization.
+                # 5. Perform optimization step.
                 self.optimizer.step()
 
             # save model at end of each epoch
@@ -168,34 +171,36 @@ class Trainer(object):
 
             # validate the model on the validation set
             self.model.eval()
-            val_loss = 0
+            val_loss, val_tokens = 0, 0
+
             for i, batch in enumerate(self.validation_dataset):
 
                 # Convert batch to CUDA.
                 if torch.cuda.is_available():
                     batch.cuda()
 
-                # 1. Perform forward calculation.
+                # 1. Perform forward pass.
                 logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 2. Evaluate loss function.
                 loss = self.loss_fn(logits, batch.trg_shifted)
 
+                # Accumulate loss & tokens
                 val_loss += loss.item()
+                val_tokens += batch.ntokens
+
+            # 3.1 Collect loss, episode: Log only one point per validation (for now)
+            self.validation_stat_col['loss'] = val_loss / val_tokens
+            self.validation_stat_col['episode'] = episode
 
             # 3.1. Export to csv.
-            # collect loss, episode
-            self.validation_stat_col['loss'] = val_loss / (i + 1)
-            self.validation_stat_col['episode'] = episode
             self.validation_stat_col.export_to_csv()
 
-            # 3.2 Log "elementary" statistics - episode and loss.
-            self.logger.info(self.training_stat_col.export_to_string('[Validation]'))
+            # 3.2 Exports statistics to the logger.
+            self.logger.info(self.validation_stat_col.export_to_string('[Validation]'))
 
             # 3.3 Export to Tensorboard
             self.validation_stat_col.export_to_tensorboard()
-
-            self.validation_stat_col.empty()
 
         # training done, end statistics collection
         self.finalize_statistics_collection()
