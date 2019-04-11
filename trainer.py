@@ -55,6 +55,9 @@ class Trainer(object):
                 blank_token=params["dataset"]["pad_token"],
                 batch_size=params["training"]["train_batch_size"])
 
+        # to iterate more than once
+        self.training_dataset = list(self.training_dataset)
+
         # just for safety, asuume that the padding token of the source vocab is always equal to the target one (for now)
         assert self.src_padding == self.trg_padding, "the padding token ({}) for the source vocab is not equal" \
                                                      "to the one from the target vocab ({}).".format(self.src_padding,
@@ -70,6 +73,9 @@ class Trainer(object):
             eos_token=params["dataset"]["eos_token"],
             blank_token=params["dataset"]["pad_token"],
             batch_size=params["training"]["valid_batch_size"])
+
+        # to iterate more than once
+        self.validation_dataset = list(self.validation_dataset)
 
         self.logger.info("Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
                          .format(self.src_vocab_size, self.trg_vocab_size))
@@ -379,7 +385,7 @@ if __name__ == '__main__':
             "min_freq": 2,
             "start_token": "<s>",
             "eos_token": "</s>",
-            "pad_token": "<pad>"
+            "pad_token": "<blank>"
 
         },
 
