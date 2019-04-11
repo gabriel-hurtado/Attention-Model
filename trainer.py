@@ -93,6 +93,9 @@ class Trainer(object):
         # can now instantiate model
         self.model = Transformer(params["model"]).to(device)
 
+        # whether to save the model at every epoch or not
+        self.save_intermediate = params["training"]["save_intermediate"]
+
         # instantiate loss
         if "smoothing" in params["training"]:
             self.loss_fn = LabelSmoothingLoss(size=self.trg_vocab_size,
@@ -179,7 +182,7 @@ class Trainer(object):
                 self.optimizer.step()
 
             # save model at end of each epoch if indicated:
-            if params["training"]["save_intermediate"]:
+            if self.save_intermediate:
                 self.model.save(self.model_dir, epoch, loss.item())
                 self.logger.info("Model exported to checkpoint.")
 
