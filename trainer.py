@@ -154,6 +154,7 @@ class Trainer(object):
                 # collect loss, episode
                 self.training_stat_col['loss'] = loss.item()
                 self.training_stat_col['episode'] = episode
+                self.training_stat_col['src_seq_length'] = batch.src.shape[1]
                 self.training_stat_col.export_to_csv()
 
                 # 4.2. Exports statistics to the logger.
@@ -306,6 +307,7 @@ class Trainer(object):
         self.training_stat_col.add_statistic('epoch', '{:02d}')
         self.training_stat_col.add_statistic('loss', '{:12.10f}')
         self.training_stat_col.add_statistic('episode', '{:06d}')
+        self.training_stat_col.add_statistic('src_seq_length', '{:02d}')
 
         # Create the csv file to store the training statistics.
         self.training_batch_stats_file = self.training_stat_col.initialize_csv_file(self.log_dir,
