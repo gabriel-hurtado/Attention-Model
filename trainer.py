@@ -360,9 +360,9 @@ if __name__ == '__main__':
     params = {
         "training": {
             "epochs": 10,
-            "train_batch_size": 32,
-            "valid_batch_size": 32,
-            "smoothing": 0.0,
+            "train_batch_size": 1024,
+            "valid_batch_size": 1024,
+            "smoothing": 0.1,
         },
 
         "optim": {
@@ -370,7 +370,7 @@ if __name__ == '__main__':
             "betas": (0.9, 0.98),
             "eps": 1e-9,
             "factor": 1,
-            "warmup": 400
+            "warmup": 2000
 
         },
 
