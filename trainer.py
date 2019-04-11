@@ -172,9 +172,10 @@ class Trainer(object):
                 # 5. Perform optimization step.
                 self.optimizer.step()
 
-            # save model at end of each epoch
-            self.model.save(self.model_dir, epoch, loss.item())
-            self.logger.info("Model exported to checkpoint.")
+            # save model at end of each epoch if indicated:
+            if params["training"]["save_intermediate"]:
+                self.model.save(self.model_dir, epoch, loss.item())
+                self.logger.info("Model exported to checkpoint.")
 
             # validate the model on the validation set
             self.model.eval()
@@ -208,6 +209,10 @@ class Trainer(object):
 
             # 3.3 Export to Tensorboard
             self.validation_stat_col.export_to_tensorboard()
+
+        # always save the model at end of training
+        self.model.save(self.model_dir, epoch, loss.item())
+        self.logger.info("Final model exported to checkpoint.")
 
         # training done, end statistics collection
         self.finalize_statistics_collection()
@@ -369,6 +374,7 @@ if __name__ == '__main__':
             "train_batch_size": 1024,
             "valid_batch_size": 1024,
             "smoothing": 0.1,
+            "save_intermediate": False
         },
 
         "optim": {
