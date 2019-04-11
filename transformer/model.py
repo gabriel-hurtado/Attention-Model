@@ -217,7 +217,7 @@ class Transformer(nn.Module):
         # 9. retrieve words from tokens in the target vocab
         translation = ""
         for i in range(1, decoder_in.shape[1]):
-            sym = trg_vocab.itos[decoder_in[i]]
+            sym = trg_vocab.itos[decoder_in[0, i]]
             if sym == trg_vocab.stoi[stop_symbol]: break
             translation += sym + " "
 
