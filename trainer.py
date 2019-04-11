@@ -185,7 +185,7 @@ class Trainer(object):
 
             # validate the model on the validation set
             self.model.eval()
-            val_loss, val_tokens = 0, 0
+            val_loss = 0
 
             for i, batch in enumerate(self.validation_dataset):
 
@@ -199,12 +199,11 @@ class Trainer(object):
                 # 2. Evaluate loss function.
                 loss = self.loss_fn(logits, batch.trg_shifted)
 
-                # Accumulate loss & tokens
+                # Accumulate loss
                 val_loss += loss.item()
-                val_tokens += batch.ntokens
 
             # 3.1 Collect loss, episode: Log only one point per validation (for now)
-            self.validation_stat_col['loss'] = val_loss / val_tokens
+            self.validation_stat_col['loss'] = val_loss / (i + 1)
             self.validation_stat_col['episode'] = episode
 
             # 3.1. Export to csv.
