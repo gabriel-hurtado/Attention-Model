@@ -44,27 +44,33 @@ class Trainer(object):
 
         # initialize training Dataset class
         self.logger.info("Creating the training & validation dataset, may take some time...")
-        self.training_dataset, self.src_vocab_size, self.trg_vocab_size, self.src_padding, self.trg_padding = \
-            IWSLTDatasetBuilder.build(
-                language_pair=LanguagePair.fr_en,
-                split=Split.Train,
-                max_length=params["dataset"]["max_seq_length"],
-                min_freq=params["dataset"]["min_freq"],
-                start_token=params["dataset"]["start_token"],
-                eos_token=params["dataset"]["eos_token"],
-                blank_token=params["dataset"]["pad_token"],
-                batch_size=params["training"]["train_batch_size"])
+        self.training_dataset, self.src_vocab, self.trg_vocab = IWSLTDatasetBuilder.build(
+            language_pair=LanguagePair.fr_en,
+            split=Split.Train,
+            max_length=params["dataset"]["max_seq_length"],
+            min_freq=params["dataset"]["min_freq"],
+            start_token=params["dataset"]["start_token"],
+            eos_token=params["dataset"]["eos_token"],
+            blank_token=params["dataset"]["pad_token"],
+            batch_size=params["training"]["train_batch_size"])
 
         # to iterate more than once
         self.training_dataset = list(self.training_dataset)
 
-        # just for safety, asuume that the padding token of the source vocab is always equal to the target one (for now)
+        # get the size of the vocab sets
+        self.src_vocab_size, self.trg_vocab_size = len(self.src_vocab), len(self.trg_vocab)
+
+        # Find integer value of "padding" in the respective vocabularies
+        self.src_padding = self.src_vocab.stoi[params["dataset"]["pad_token"]]
+        self.trg_padding = self.trg_vocab.stoi[params["dataset"]["pad_token"]]
+
+        # just for safety, assume that the padding token of the source vocab is always equal to the target one (for now)
         assert self.src_padding == self.trg_padding, "the padding token ({}) for the source vocab is not equal" \
                                                      "to the one from the target vocab ({}).".format(self.src_padding,
                                                                                                      self.trg_padding)
 
         # initialize validation Dataset class
-        self.validation_dataset, _, _, _, _ = IWSLTDatasetBuilder.build(
+        self.validation_dataset, _, _ = IWSLTDatasetBuilder.build(
             language_pair=LanguagePair.fr_en,
             split=Split.Validation,
             max_length=params["dataset"]["max_seq_length"],

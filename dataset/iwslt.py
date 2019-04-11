@@ -37,16 +37,15 @@ class IWSLTDatasetBuilder():
         Initializes an iterator over the IWSLT dataset.
         The iterator then yields batches of size `batch_size`.
 
-        Returns the iterator alongside the size of the input & output vocabs and the padding tokens
-        for the source and target sequences.
+        Returns the iterator alongside the input & output vocab sets.
 
         Example:
 
-        >>> dataset_iterator, src_vocab_size, trg_vocab_size, src_padding, trg_padding = IWSLTDatasetBuilder.build(
-        ...                                                                              language_pair=language_pair,
-        ...                                                                              split=Split.Train,
-        ...                                                                              max_length=5,
-        ...                                                                              batch_size=batch_size)
+        >>> dataset_iterator, src_vocab, trg_vocab = IWSLTDatasetBuilder.build(
+        ...                                               language_pair=language_pair,
+        ...                                               split=Split.Train,
+        ...                                               max_length=5,
+        ...                                               batch_size=batch_size)
         >>> batch = next(iter(dataset_iterator))
 
         :param language_pair: The language pair for which to create a vocabulary.
@@ -86,10 +85,6 @@ class IWSLTDatasetBuilder():
         source_field.build_vocab(train, min_freq=min_freq)
         target_field.build_vocab(train, min_freq=min_freq)
 
-        # Find integer value of "padding" in the respective vocabularies
-        src_padding = source_field.vocab.stoi[blank_token]
-        trg_padding = target_field.vocab.stoi[blank_token]
-
         return IWSLTDatasetBuilder.masked(
             IWSLTDatasetBuilder.transposed(
                 data.BucketIterator(
@@ -97,4 +92,4 @@ class IWSLTDatasetBuilder():
                     sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
                 )
             )
-        ), len(source_field.vocab), len(target_field.vocab), src_padding, trg_padding
+        ), source_field.vocab, target_field.vocab
