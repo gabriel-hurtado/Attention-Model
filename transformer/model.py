@@ -91,11 +91,11 @@ class Transformer(nn.Module):
 
         pos_encoding = PositionalEncoding(d_model=params['d_model'], dropout=params['dropout'])
 
-        self.src_embedings = nn.Sequential(Embeddings(d_model=params['d_model'], vocab_size=params['src_vocab_size']),
-                                           pos_encoding)
+        self.src_embeddings = nn.Sequential(Embeddings(d_model=params['d_model'], vocab_size=params['src_vocab_size']),
+                                            pos_encoding)
 
-        self.tgt_embedings = nn.Sequential(Embeddings(d_model=params['d_model'], vocab_size=params['tgt_vocab_size']),
-                                           pos_encoding)
+        self.trg_embeddings = nn.Sequential(Embeddings(d_model=params['d_model'], vocab_size=params['tgt_vocab_size']),
+                                            pos_encoding)
 
         self.classifier = OutputClassifier(d_model=params['d_model'], vocab=params['tgt_vocab_size'])
 
@@ -132,26 +132,25 @@ class Transformer(nn.Module):
         """
 
         # 1. embed the input batch: have to move input sequences to torch.*.LongTensor
-        src_sequences = self.src_embedings(src_sequences.type(LongTensor))
+        src_sequences = self.src_embeddings(src_sequences.type(LongTensor))
 
         # 2. encoder stack
         encoder_output = self.encoder(src=src_sequences, mask=src_mask, verbose=False)
 
         # 3. get subsequent mask to hide subsequent positions in the decoder.
-        self_mask = subsequent_mask(trg_sequences.shape[1])
+        # self_mask = subsequent_mask(trg_sequences.shape[1])
 
         # 3.5 Combine the trg_mask (which hides padding) and self_mask (which hide subsequent positions in the decoder)
         # as one mask
 
-        hide_padding_and_future_words_mask = trg_mask.type_as(self_mask.data) & self_mask
+        # hide_padding_and_future_words_mask = trg_mask.type_as(self_mask.data) & self_mask
 
         # 4. embed the output batch
-        trg_sequences = self.tgt_embedings(trg_sequences.type(LongTensor))
+        trg_sequences = self.trg_embeddings(trg_sequences.type(LongTensor))
 
         # 4. decoder stack
         decoder_output = self.decoder(x=trg_sequences, memory=encoder_output,
-                                      self_mask=hide_padding_and_future_words_mask,
-                                      memory_mask=src_mask)
+                                      self_mask=trg_mask, memory_mask=src_mask)
 
         # 5. classifier
         logits = self.classifier(decoder_output)
@@ -178,7 +177,7 @@ class Transformer(nn.Module):
         self.eval()
 
         # 1. Embed src
-        embedded = self.src_embedings(src.type(LongTensor))
+        embedded = self.src_embeddings(src.type(LongTensor))
 
         # 2. Encode embedded inputs
         memory = self.encoder(src=embedded, mask=src_mask)
@@ -189,7 +188,7 @@ class Transformer(nn.Module):
         for i in range(src.shape[1] - 1):
 
             # 4. Embed decoder_in
-            decoder_in_embed = self.tgt_embedings(decoder_in.type(LongTensor))
+            decoder_in_embed = self.trg_embeddings(decoder_in.type(LongTensor))
 
             # 5. Go through decoder
             out = self.decoder(x=decoder_in_embed, memory=memory,
