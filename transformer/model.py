@@ -159,7 +159,7 @@ class Transformer(nn.Module):
 
         return logits
 
-    def greedy_decode(self, src: torch.Tensor, src_mask: torch.Tensor, src_vocab, trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=100) -> torch.Tensor:
+    def greedy_decode(self, src: torch.Tensor, src_mask: torch.Tensor, trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=100) -> torch.Tensor:
         """
         Returns the prediction for `src` using greedy decoding for simplicity:
 
@@ -171,9 +171,6 @@ class Transformer(nn.Module):
         :param src: sample for which to produce predictions.
 
         :param src_mask: Associated `src` mask
-
-        :param src_vocab: Vocabulary set of the source sentences.
-        :type src_vocab: torchtext.vocab.Vocab
 
         :param trg_vocab: Vocabulary set of the target sentences.
         :type trg_vocab: torchtext.vocab.Vocab
