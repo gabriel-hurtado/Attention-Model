@@ -157,7 +157,7 @@ class Transformer(nn.Module):
 
         return logits
 
-    def greedy_decode(self, src: torch.Tensor, src_mask: torch.Tensor, start_symbol=1) -> torch.Tensor:
+    def greedy_decode(self, src: torch.Tensor, src_mask: torch.Tensor, src_vocab, trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=100) -> torch.Tensor:
         """
         Returns the prediction for `src` using greedy decoding for simplicity:
 
@@ -170,7 +170,17 @@ class Transformer(nn.Module):
 
         :param src_mask: Associated `src` mask
 
-        :param start_symbol: Symbol used as initial value for the Decoder. Should correspond to start_token="<s>" in the translation task.
+        :param src_vocab: Vocabulary set of the source sentences.
+        :type src_vocab: torchtext.vocab.Vocab
+
+        :param trg_vocab: Vocabulary set of the target sentences.
+        :type trg_vocab: torchtext.vocab.Vocab
+
+        :param start_symbol: Symbol used as initial value for the Decoder. Should correspond to start_token="<s>" in the dataset vocab).
+
+        :param stop_symbol: Symbol used to represent an end of sentence, e.g. "</s>" (in the dataset vocab).
+
+        :param max_length: Maximum sequence length of the prediction.
 
         """
         # 0. Ensure inference mode
@@ -183,9 +193,9 @@ class Transformer(nn.Module):
         memory = self.encoder(src=embedded, mask=src_mask)
 
         # 3. Create initial input for decoder
-        decoder_in = torch.ones(src.shape[0], 1).type(FloatTensor) * start_symbol
+        decoder_in = torch.ones(src.shape[0], 1).type(FloatTensor) * trg_vocab.stoi[start_symbol]
 
-        for i in range(src.shape[1] - 1):
+        for i in range(max_length):
 
             # 4. Embed decoder_in
             decoder_in_embed = self.trg_embeddings(decoder_in.type(LongTensor))
@@ -204,8 +214,15 @@ class Transformer(nn.Module):
             # 8. Concatenate predicted token with previous predictions
             decoder_in = torch.cat([decoder_in, next_token.type(FloatTensor)], dim=1)
 
-        # 9. Return entire prediction
-        return decoder_in
+        # 9. retrieve words from tokens in the target vocab
+        translation = ""
+        for i in range(1, decoder_in.shape[1]):
+            sym = trg_vocab.itos[decoder_in[i]]
+            if sym == "</s>": break
+            translation += sym + " "
+
+        # 10. return prediction
+        return translation
 
     def save(self, model_dir: str, epoch_idx: int, loss_value: float) -> None:
         """
