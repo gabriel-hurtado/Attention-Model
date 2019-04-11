@@ -14,10 +14,12 @@ if torch.cuda.is_available():
     device = torch.device('cuda')
     FloatTensor = torch.cuda.FloatTensor
     LongTensor = torch.cuda.LongTensor
+    IntTensor = torch.cuda.IntTensor
 else:
     device = torch.device('cpu')
     FloatTensor = torch.FloatTensor
     LongTensor = torch.LongTensor
+    IntTensor = torch.IntTensor
 
 
 class Transformer(nn.Module):
@@ -214,12 +216,16 @@ class Transformer(nn.Module):
             # 8. Concatenate predicted token with previous predictions
             decoder_in = torch.cat([decoder_in, next_token.type(FloatTensor)], dim=1)
 
+        # cast to int tensors
+        decoder_in = decoder_in.type(IntTensor)
         # 9. retrieve words from tokens in the target vocab
         translation = ""
-        for i in range(1, decoder_in.shape[1]):
+        for i in range( decoder_in.shape[1]):
             sym = trg_vocab.itos[decoder_in[0, i]]
-            if sym == trg_vocab.stoi[stop_symbol]: break
             translation += sym + " "
+
+            if sym == trg_vocab.stoi[stop_symbol]:
+                break
 
         # 10. return prediction
         return translation
