@@ -4,13 +4,14 @@ import torch
 import logging
 import logging.config
 from datetime import datetime
-from torch.utils.data import DataLoader
 
 from transformer.model import Transformer
 from training.optimizer import NoamOpt
 from training.loss import LabelSmoothingLoss, CrossEntropyLoss
 from training.statistics_collector import StatisticsCollector
-from dataset.copy_task import CopyTaskDataset
+from dataset.iwslt import IWSLTDatasetBuilder
+from dataset.language_pairs import LanguagePair
+from dataset.utils import Split
 
 
 class Trainer(object):
@@ -41,17 +42,68 @@ class Trainer(object):
         self.initialize_statistics_collection()
         self.initialize_tensorboard()
 
-        # instantiate model
+        # initialize training Dataset class
+        self.logger.info("Creating the training & validation dataset, may take some time...")
+        self.training_dataset, self.src_vocab, self.trg_vocab = IWSLTDatasetBuilder.build(
+            language_pair=LanguagePair.fr_en,
+            split=Split.Train,
+            max_length=params["dataset"]["max_seq_length"],
+            min_freq=params["dataset"]["min_freq"],
+            start_token=params["dataset"]["start_token"],
+            eos_token=params["dataset"]["eos_token"],
+            blank_token=params["dataset"]["pad_token"],
+            batch_size=params["training"]["train_batch_size"])
+
+        # to iterate more than once
+        self.training_dataset = list(self.training_dataset)
+
+        # get the size of the vocab sets
+        self.src_vocab_size, self.trg_vocab_size = len(self.src_vocab), len(self.trg_vocab)
+
+        # Find integer value of "padding" in the respective vocabularies
+        self.src_padding = self.src_vocab.stoi[params["dataset"]["pad_token"]]
+        self.trg_padding = self.trg_vocab.stoi[params["dataset"]["pad_token"]]
+
+        # just for safety, assume that the padding token of the source vocab is always equal to the target one (for now)
+        assert self.src_padding == self.trg_padding, "the padding token ({}) for the source vocab is not equal" \
+                                                     "to the one from the target vocab ({}).".format(self.src_padding,
+                                                                                                     self.trg_padding)
+
+        # initialize validation Dataset class
+        self.validation_dataset, _, _ = IWSLTDatasetBuilder.build(
+            language_pair=LanguagePair.fr_en,
+            split=Split.Validation,
+            max_length=params["dataset"]["max_seq_length"],
+            min_freq=params["dataset"]["min_freq"],
+            start_token=params["dataset"]["start_token"],
+            eos_token=params["dataset"]["eos_token"],
+            blank_token=params["dataset"]["pad_token"],
+            batch_size=params["training"]["valid_batch_size"])
+
+        # to iterate more than once
+        self.validation_dataset = list(self.validation_dataset)
+
+        self.logger.info("Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
+                         .format(self.src_vocab_size, self.trg_vocab_size))
+
+        # pass the size of input & output vocabs to model's params
+        params["model"]["src_vocab_size"] = self.src_vocab_size
+        params["model"]["tgt_vocab_size"] = self.trg_vocab_size
+
+        # can now instantiate model
         self.model = Transformer(params["model"]).to(device)
+
+        # whether to save the model at every epoch or not
+        self.save_intermediate = params["training"]["save_intermediate"]
 
         # instantiate loss
         if "smoothing" in params["training"]:
-            self.loss_fn = LabelSmoothingLoss(size=params["model"]["tgt_vocab_size"],
-                                              padding_token=params["dataset"]["pad_token"],
+            self.loss_fn = LabelSmoothingLoss(size=self.trg_vocab_size,
+                                              padding_token=self.src_padding,
                                               smoothing=params["training"]["smoothing"])
             self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(params["training"]["smoothing"]))
         else:
-            self.loss_fn = CrossEntropyLoss(pad_token=params["dataset"]["pad_token"])
+            self.loss_fn = CrossEntropyLoss(pad_token=self.src_padding)
             self.logger.info("Using CrossEntropyLoss.")
 
         # instantiate optimizer
@@ -65,28 +117,6 @@ class Trainer(object):
 
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
-
-        # initialize training Dataset class
-        self.training_dataset = CopyTaskDataset(max_int=params["dataset"]["training"]["max_int"],
-                                                max_seq_length=params["dataset"]["training"]["max_seq_length"],
-                                                size=params["dataset"]["training"]["size"])
-
-        # initialize DataLoader
-        self.training_dataloader = DataLoader(dataset=self.training_dataset,
-                                              batch_size=params["training"]["batch_size"],
-                                              shuffle=False, num_workers=0,
-                                              collate_fn=self.training_dataset.collate)
-
-        # initialize validation Dataset class
-        self.validation_dataset = CopyTaskDataset(max_int=params["dataset"]["validation"]["max_int"],
-                                                  max_seq_length=params["dataset"]["validation"]["max_seq_length"],
-                                                  size=params["dataset"]["validation"]["size"])
-
-        # initialize Validation DataLoader
-        self.validation_dataloader = DataLoader(dataset=self.validation_dataset,
-                                                batch_size=len(self.validation_dataset),
-                                                shuffle=False, num_workers=0,
-                                                collate_fn=self.validation_dataset.collate)
 
         self.logger.info('Experiment setup done.')
 
@@ -103,15 +133,18 @@ class Trainer(object):
 
         for epoch in range(self.epochs):
 
-            # Empty the statistics collector.
+            # Empty the statistics collectors.
             self.training_stat_col.empty()
+            self.validation_stat_col.empty()
 
             # collect epoch index
             self.training_stat_col['epoch'] = epoch + 1
             self.validation_stat_col['epoch'] = epoch + 1
 
+            # ensure train mode for the model
             self.model.train()
-            for i, batch in enumerate(self.training_dataloader):
+
+            for i, batch in enumerate(self.training_dataset):
 
                 # "Move on" to the next episode.
                 episode += 1
@@ -123,11 +156,11 @@ class Trainer(object):
                 if torch.cuda.is_available():
                     batch.cuda()
 
-                # 2. Perform forward calculation.
+                # 2. Perform forward pass.
                 logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 3. Evaluate loss function.
-                loss = self.loss_fn(logits, batch.trg_y)
+                loss = self.loss_fn(logits, batch.trg_shifted)
 
                 # 4. Backward gradient flow.
                 loss.backward()
@@ -136,46 +169,58 @@ class Trainer(object):
                 # collect loss, episode
                 self.training_stat_col['loss'] = loss.item()
                 self.training_stat_col['episode'] = episode
+                self.training_stat_col['src_seq_length'] = batch.src.shape[1]
                 self.training_stat_col.export_to_csv()
 
-                # 4.2. Log "elementary" statistics - episode and loss.
+                # 4.2. Exports statistics to the logger.
                 self.logger.info(self.training_stat_col.export_to_string())
 
                 # 4.3 Exports to tensorboard
                 self.training_stat_col.export_to_tensorboard()
 
-                # 5. Perform optimization.
+                # 5. Perform optimization step.
                 self.optimizer.step()
 
-            # save model at end of each epoch
-            self.model.save(self.model_dir, epoch, loss.item())
-            self.logger.info("Model exported to checkpoint.")
+            # save model at end of each epoch if indicated:
+            if self.save_intermediate:
+                self.model.save(self.model_dir, epoch, loss.item())
+                self.logger.info("Model exported to checkpoint.")
 
             # validate the model on the validation set
             self.model.eval()
-            for batch in self.validation_dataloader:
+            val_loss = 0
+
+            for i, batch in enumerate(self.validation_dataset):
 
                 # Convert batch to CUDA.
                 if torch.cuda.is_available():
                     batch.cuda()
 
-                # 1. Perform forward calculation.
+                # 1. Perform forward pass.
                 logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 2. Evaluate loss function.
-                loss = self.loss_fn(logits, batch.trg_y)
+                loss = self.loss_fn(logits, batch.trg_shifted)
 
-                # 3.1. Export to csv - at every step.
-                # collect loss, episode
-                self.validation_stat_col['loss'] = loss.item()
-                self.validation_stat_col['episode'] = episode
-                self.validation_stat_col.export_to_csv()
+                # Accumulate loss
+                val_loss += loss.item()
 
-                # 3.2 Log "elementary" statistics - episode and loss.
-                self.logger.info(self.training_stat_col.export_to_string('[Validation]'))
+            # 3.1 Collect loss, episode: Log only one point per validation (for now)
+            self.validation_stat_col['loss'] = val_loss / (i + 1)
+            self.validation_stat_col['episode'] = episode
 
-                # 3.3 Export to Tensorboard
-                self.validation_stat_col.export_to_tensorboard()
+            # 3.1. Export to csv.
+            self.validation_stat_col.export_to_csv()
+
+            # 3.2 Exports statistics to the logger.
+            self.logger.info(self.validation_stat_col.export_to_string('[Validation]'))
+
+            # 3.3 Export to Tensorboard
+            self.validation_stat_col.export_to_tensorboard()
+
+        # always save the model at end of training
+        self.model.save(self.model_dir, epoch, loss.item())
+        self.logger.info("Final model exported to checkpoint.")
 
         # training done, end statistics collection
         self.finalize_statistics_collection()
@@ -281,6 +326,7 @@ class Trainer(object):
         self.training_stat_col.add_statistic('epoch', '{:02d}')
         self.training_stat_col.add_statistic('loss', '{:12.10f}')
         self.training_stat_col.add_statistic('episode', '{:06d}')
+        self.training_stat_col.add_statistic('src_seq_length', '{:02d}')
 
         # Create the csv file to store the training statistics.
         self.training_batch_stats_file = self.training_stat_col.initialize_csv_file(self.log_dir,
@@ -332,9 +378,11 @@ if __name__ == '__main__':
 
     params = {
         "training": {
-                "epochs": 10,
-                "batch_size": 30,
-                "smoothing": 0.0,
+            "epochs": 10,
+            "train_batch_size": 1024,
+            "valid_batch_size": 1024,
+            "smoothing": 0.1,
+            "save_intermediate": False
         },
 
         "optim": {
@@ -342,40 +390,33 @@ if __name__ == '__main__':
             "betas": (0.9, 0.98),
             "eps": 1e-9,
             "factor": 1,
-            "warmup": 400
+            "warmup": 2000
 
         },
 
         "dataset": {
-            "pad_token": 0,
-
-            'training': {
-                    'max_int': 11,
-                    'max_seq_length': 10,
-                    'size': 30*20},
-
-            'validation': {
-                'max_int': 11,
-                'max_seq_length': 10,
-                'size': 10}
+            "max_seq_length": 7,
+            "min_freq": 2,
+            "start_token": "<s>",
+            "eos_token": "</s>",
+            "pad_token": "<blank>"
 
         },
 
         "model": {
-                'd_model': 512,
-                'src_vocab_size': 11,
-                'tgt_vocab_size': 11,
+            'd_model': 512,
+            'N': 6,
+            'dropout': 0.1,
 
-                'N': 2,
-                'dropout': 0.1,
+            'attention': {
+                'n_head': 8,
+                'd_k': 64,
+                'd_v': 64,
+                'dropout': 0.1},
 
-                'attention': {'n_head': 8,
-                              'd_k': 64,
-                              'd_v': 64,
-                              'dropout': 0.1},
-
-                'feed-forward': {'d_ff': 2048,
-                                 'dropout': 0.1}
+            'feed-forward': {
+                'd_ff': 2048,
+                'dropout': 0.1}
         }
     }
     trainer = Trainer(params)

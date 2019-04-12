@@ -14,10 +14,12 @@ if torch.cuda.is_available():
     device = torch.device('cuda')
     FloatTensor = torch.cuda.FloatTensor
     LongTensor = torch.cuda.LongTensor
+    IntTensor = torch.cuda.IntTensor
 else:
     device = torch.device('cpu')
     FloatTensor = torch.FloatTensor
     LongTensor = torch.LongTensor
+    IntTensor = torch.IntTensor
 
 
 class Transformer(nn.Module):
@@ -91,11 +93,11 @@ class Transformer(nn.Module):
 
         pos_encoding = PositionalEncoding(d_model=params['d_model'], dropout=params['dropout'])
 
-        self.src_embedings = nn.Sequential(Embeddings(d_model=params['d_model'], vocab_size=params['src_vocab_size']),
-                                           pos_encoding)
+        self.src_embeddings = nn.Sequential(Embeddings(d_model=params['d_model'], vocab_size=params['src_vocab_size']),
+                                            pos_encoding)
 
-        self.tgt_embedings = nn.Sequential(Embeddings(d_model=params['d_model'], vocab_size=params['tgt_vocab_size']),
-                                           pos_encoding)
+        self.trg_embeddings = nn.Sequential(Embeddings(d_model=params['d_model'], vocab_size=params['tgt_vocab_size']),
+                                            pos_encoding)
 
         self.classifier = OutputClassifier(d_model=params['d_model'], vocab=params['tgt_vocab_size'])
 
@@ -132,33 +134,32 @@ class Transformer(nn.Module):
         """
 
         # 1. embed the input batch: have to move input sequences to torch.*.LongTensor
-        src_sequences = self.src_embedings(src_sequences.type(LongTensor))
+        src_sequences = self.src_embeddings(src_sequences.type(LongTensor))
 
         # 2. encoder stack
         encoder_output = self.encoder(src=src_sequences, mask=src_mask, verbose=False)
 
         # 3. get subsequent mask to hide subsequent positions in the decoder.
-        self_mask = subsequent_mask(trg_sequences.shape[1])
+        # self_mask = subsequent_mask(trg_sequences.shape[1])
 
         # 3.5 Combine the trg_mask (which hides padding) and self_mask (which hide subsequent positions in the decoder)
         # as one mask
 
-        hide_padding_and_future_words_mask = trg_mask.type_as(self_mask.data) & self_mask
+        # hide_padding_and_future_words_mask = trg_mask.type_as(self_mask.data) & self_mask
 
         # 4. embed the output batch
-        trg_sequences = self.tgt_embedings(trg_sequences.type(LongTensor))
+        trg_sequences = self.trg_embeddings(trg_sequences.type(LongTensor))
 
         # 4. decoder stack
         decoder_output = self.decoder(x=trg_sequences, memory=encoder_output,
-                                      self_mask=hide_padding_and_future_words_mask,
-                                      memory_mask=src_mask)
+                                      self_mask=trg_mask, memory_mask=src_mask)
 
         # 5. classifier
         logits = self.classifier(decoder_output)
 
         return logits
 
-    def greedy_decode(self, src: torch.Tensor, src_mask: torch.Tensor, start_symbol=1) -> torch.Tensor:
+    def greedy_decode(self, src: torch.Tensor, src_mask: torch.Tensor, trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=100) -> torch.Tensor:
         """
         Returns the prediction for `src` using greedy decoding for simplicity:
 
@@ -171,25 +172,32 @@ class Transformer(nn.Module):
 
         :param src_mask: Associated `src` mask
 
-        :param start_symbol: Symbol used as initial value for the Decoder. Should correspond to start_token="<s>" in the translation task.
+        :param trg_vocab: Vocabulary set of the target sentences.
+        :type trg_vocab: torchtext.vocab.Vocab
+
+        :param start_symbol: Symbol used as initial value for the Decoder. Should correspond to start_token="<s>" in the dataset vocab).
+
+        :param stop_symbol: Symbol used to represent an end of sentence, e.g. "</s>" (in the dataset vocab).
+
+        :param max_length: Maximum sequence length of the prediction.
 
         """
         # 0. Ensure inference mode
         self.eval()
 
         # 1. Embed src
-        embedded = self.src_embedings(src.type(LongTensor))
+        embedded = self.src_embeddings(src.type(LongTensor))
 
         # 2. Encode embedded inputs
         memory = self.encoder(src=embedded, mask=src_mask)
 
         # 3. Create initial input for decoder
-        decoder_in = torch.ones(src.shape[0], 1).type(FloatTensor) * start_symbol
+        decoder_in = torch.ones(src.shape[0], 1).type(FloatTensor) * trg_vocab.stoi[start_symbol]
 
-        for i in range(src.shape[1] - 1):
+        for i in range(max_length):
 
             # 4. Embed decoder_in
-            decoder_in_embed = self.tgt_embedings(decoder_in.type(LongTensor))
+            decoder_in_embed = self.trg_embeddings(decoder_in.type(LongTensor))
 
             # 5. Go through decoder
             out = self.decoder(x=decoder_in_embed, memory=memory,
@@ -205,8 +213,19 @@ class Transformer(nn.Module):
             # 8. Concatenate predicted token with previous predictions
             decoder_in = torch.cat([decoder_in, next_token.type(FloatTensor)], dim=1)
 
-        # 9. Return entire prediction
-        return decoder_in
+        # cast to int tensors
+        decoder_in = decoder_in.type(IntTensor)
+        # 9. retrieve words from tokens in the target vocab
+        translation = ""
+        for i in range( decoder_in.shape[1]):
+            sym = trg_vocab.itos[decoder_in[0, i]]
+            translation += sym + " "
+
+            if sym == trg_vocab.stoi[stop_symbol]:
+                break
+
+        # 10. return prediction
+        return translation
 
     def save(self, model_dir: str, epoch_idx: int, loss_value: float) -> None:
         """
