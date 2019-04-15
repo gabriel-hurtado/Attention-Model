@@ -54,9 +54,6 @@ class Trainer(object):
             blank_token=params["dataset"]["pad_token"],
             batch_size=params["training"]["train_batch_size"])
 
-        # to iterate more than once
-        self.training_dataset = list(self.training_dataset)
-
         # get the size of the vocab sets
         self.src_vocab_size, self.trg_vocab_size = len(self.src_vocab), len(self.trg_vocab)
 
@@ -79,9 +76,6 @@ class Trainer(object):
             eos_token=params["dataset"]["eos_token"],
             blank_token=params["dataset"]["pad_token"],
             batch_size=params["training"]["valid_batch_size"])
-
-        # to iterate more than once
-        self.validation_dataset = list(self.validation_dataset)
 
         self.logger.info("Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
                          .format(self.src_vocab_size, self.trg_vocab_size))

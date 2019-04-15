@@ -88,7 +88,7 @@ class IWSLTDatasetBuilder():
         return IWSLTDatasetBuilder.masked(
             IWSLTDatasetBuilder.transposed(
                 data.BucketIterator(
-                    dataset=dataset, batch_size=batch_size,
+                    dataset=dataset, batch_size=batch_size, repeat=True,
                     sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
                 )
             )
