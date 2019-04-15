@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
+test -x conda || (echo "Please install conda first" && exit 1)
 
 # clone repo
 git clone git@gitlab.com:DeepFrench/deep-learning-project.git
@@ -8,7 +11,7 @@ cd deep-learning-project/
 # create conda env
 conda create -n python3-dl python=3 -y
 
-source activate python3-dl
+conda activate python3-dl
 
 # install requirements
 conda install pytorch torchvision -c pytorch -y
