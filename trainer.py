@@ -29,12 +29,6 @@ class Trainer(object):
             - log statistics (epoch, elapsed time, BLEU score etc.)
         """
 
-        # if CUDA available, moves computations to GPU
-        if torch.cuda.is_available():
-            device = torch.device('cuda')
-        else:
-            device = torch.device('cpu')
-
         # configure all logging
         self.configure_logging(training_problem_name="copy_task", params=params)
 
@@ -79,7 +73,10 @@ class Trainer(object):
         params["model"]["tgt_vocab_size"] = self.trg_vocab_size
 
         # can now instantiate model
-        self.model = Transformer(params["model"]).to(device)
+        self.model = Transformer(params["model"])
+
+        if torch.cuda.is_available():
+            self.model = self.model.cuda()
 
         # whether to save the model at every epoch or not
         self.save_intermediate = params["training"]["save_intermediate"]

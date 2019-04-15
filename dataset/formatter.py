@@ -1,6 +1,5 @@
 from typing import Optional
 
-import torch
 import numpy as np
 from torch import Tensor
 from torchtext.data import Batch, Dataset, Field
@@ -8,12 +7,6 @@ from torchtext.data import Batch, Dataset, Field
 from dataset.europarl import Europarl, Split
 from dataset.language_pairs import LanguagePair
 from transformer.utils import subsequent_mask
-
-# if CUDA available, moves computations to GPU
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
 
 
 class BatchMasker(Batch):
@@ -50,7 +43,7 @@ class BatchMasker(Batch):
         trg_padding = self.trg_field.vocab.stoi[padding_token]
 
         # save source and mask for use during training
-        self.src_mask = (self.src != src_padding).to(device)  # type: Tensor
+        self.src_mask = (self.src != src_padding)  # type: Tensor
         # Adds a dimension in the middle (equivalent to vec = vec[:,None,:])
         self.src_mask.unsqueeze_(-2)
 
@@ -59,8 +52,8 @@ class BatchMasker(Batch):
         self.trg_shifted = None  # type: Optional[Tensor]
 
         if self.batch.trg is not None:
-            self.trg = self.batch.trg[:, :-1].to(device)
-            self.trg_shifted = self.batch.trg[:, 1:].to(device)  # type: Tensor
+            self.trg = self.batch.trg[:, :-1]
+            self.trg_shifted = self.batch.trg[:, 1:]  # type: Tensor
 
             # create mask to hide padding AND future words (subsequent)
             self.trg_mask = self.make_std_mask(self.trg, trg_padding)
@@ -108,7 +101,7 @@ class BatchMasker(Batch):
         target_mask = (target != pad).unsqueeze(-2)
 
         # hide padding and future words
-        target_mask = (target_mask & subsequent_mask(target.shape[-1]).type_as(target_mask.data)).to(device)
+        target_mask = (target_mask & subsequent_mask(target.shape[-1]).type_as(target_mask.data))
 
         return target_mask
 
@@ -116,12 +109,11 @@ class BatchMasker(Batch):
         """
         Moves Tensors to CUDA.
         """
-
-        self.src.cuda()
-        self.src_mask.cuda()
-        self.trg.cuda()
-        self.trg_mask.cuda()
-        self.trg_shifted.cuda()
+        self.batch.src = self.batch.src.cuda()
+        self.src_mask = self.src_mask.cuda()
+        self.trg = self.trg.cuda()
+        self.trg_mask = self.trg_mask.cuda()
+        self.trg_shifted = self.trg_shifted.cuda()
 
 
 class Formater(Europarl):
