@@ -86,11 +86,11 @@ class IWSLTDatasetBuilder():
 
         if split & Split.Train:
             train_iterator = data.BucketIterator(
-                dataset=train, batch_size=batch_size_train, repeat=False,
+                dataset=train, batch_size=batch_size_train, repeat=False, device='cpu',
                 sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg)))
         if split & Split.Validation:
             validation_iterator = data.BucketIterator(
-                dataset=validation, batch_size=batch_size_validation, repeat=False,
+                dataset=validation, batch_size=batch_size_validation, repeat=False, device='cpu',
                 sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg)))
 
         return (
