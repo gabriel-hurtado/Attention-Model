@@ -12,7 +12,9 @@ class TestIWSLT(TestCase):
         batch_size = 64
         language_pair = LanguagePair.fr_en
 
-        dataset_iterator = IWSLTDatasetBuilder.build(language_pair=language_pair,
+        dataset_iterator, val_iterator, _, _ = IWSLTDatasetBuilder.build(language_pair=language_pair,
                                                      split=Split.Train,
-                                                     max_length=100, batch_size=batch_size)
+                                                     max_length=100, batch_size_train=batch_size)
+        self.assertIsNotNone(dataset_iterator)
+        self.assertIsNone(val_iterator)
         batch = next(iter(dataset_iterator))

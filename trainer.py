@@ -44,15 +44,18 @@ class Trainer(object):
 
         # initialize training Dataset class
         self.logger.info("Creating the training & validation dataset, may take some time...")
-        self.training_dataset_iterator, self.src_vocab, self.trg_vocab = IWSLTDatasetBuilder.build(
+        (self.training_dataset_iterator, self.validation_dataset_iterator,
+         self.src_vocab, self.trg_vocab) = IWSLTDatasetBuilder.build(
             language_pair=LanguagePair.fr_en,
-            split=Split.Train,
+            split=Split.Train | Split.Validation,
             max_length=params["dataset"]["max_seq_length"],
             min_freq=params["dataset"]["min_freq"],
             start_token=params["dataset"]["start_token"],
             eos_token=params["dataset"]["eos_token"],
             blank_token=params["dataset"]["pad_token"],
-            batch_size=params["training"]["train_batch_size"])
+            batch_size_train=params["training"]["train_batch_size"],
+            batch_size_validation=params["training"]["valid_batch_size"],
+        )
 
         # get the size of the vocab sets
         self.src_vocab_size, self.trg_vocab_size = len(self.src_vocab), len(self.trg_vocab)
@@ -67,17 +70,6 @@ class Trainer(object):
             "to the one from the target vocab ({})."
                 .format(self.src_padding,  self.trg_padding)
         )
-
-        # initialize validation Dataset class
-        self.validation_dataset_iterator, _, _ = IWSLTDatasetBuilder.build(
-            language_pair=LanguagePair.fr_en,
-            split=Split.Validation,
-            max_length=params["dataset"]["max_seq_length"],
-            min_freq=params["dataset"]["min_freq"],
-            start_token=params["dataset"]["start_token"],
-            eos_token=params["dataset"]["eos_token"],
-            blank_token=params["dataset"]["pad_token"],
-            batch_size=params["training"]["valid_batch_size"])
 
         self.logger.info("Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
                          .format(self.src_vocab_size, self.trg_vocab_size))
