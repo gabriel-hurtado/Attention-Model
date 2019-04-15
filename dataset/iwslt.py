@@ -13,6 +13,9 @@ ROOT_DATASET_DIR = "resources/torchtext"
 class IWSLTDatasetBuilder():
     @staticmethod
     def masked(batch_iterator: Iterable[data.Batch]):
+        """
+        Helper generator to mask a batch
+        """
         for batch in batch_iterator:
             yield BatchMasker(batch)
 
@@ -32,7 +35,8 @@ class IWSLTDatasetBuilder():
 
     @staticmethod
     def build(language_pair: LanguagePair, split: Split, max_length=100, min_freq=2,
-              start_token="<s>", eos_token="</s>", blank_token="<blank>", batch_size=32):
+              start_token="<s>", eos_token="</s>", blank_token="<blank>",
+              batch_size_train=32, batch_size_validation=32):
         """
         Initializes an iterator over the IWSLT dataset.
         The iterator then yields batches of size `batch_size`.
@@ -41,11 +45,11 @@ class IWSLTDatasetBuilder():
 
         Example:
 
-        >>> dataset_iterator, src_vocab, trg_vocab = IWSLTDatasetBuilder.build(
-        ...                                               language_pair=language_pair,
-        ...                                               split=Split.Train,
-        ...                                               max_length=5,
-        ...                                               batch_size=batch_size)
+        >>> dataset_iterator, _, src_vocab, trg_vocab = IWSLTDatasetBuilder.build(
+        ...                                                  language_pair=language_pair,
+        ...                                                  split=Split.Train,
+        ...                                                  max_length=5,
+        ...                                                  batch_size_train=batch_size_train)
         >>> batch = next(iter(dataset_iterator))
 
         :param language_pair: The language pair for which to create a vocabulary.
@@ -74,22 +78,24 @@ class IWSLTDatasetBuilder():
             filter_pred=lambda x: all(len(val) <= max_length for val in (x.src, x.trg))
         )
 
-        if split == Split.Train:
-            dataset = train
-        elif split == Split.Validation:
-            dataset = validation
-        else:
-            raise NotImplementedError()
-
         # Build vocabulary on training set
         source_field.build_vocab(train, min_freq=min_freq)
         target_field.build_vocab(train, min_freq=min_freq)
 
-        return IWSLTDatasetBuilder.masked(
-            IWSLTDatasetBuilder.transposed(
-                data.BucketIterator(
-                    dataset=dataset, batch_size=batch_size,
-                    sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
-                )
-            )
-        ), source_field.vocab, target_field.vocab
+        train_iterator, validation_iterator = None, None
+
+        if split & Split.Train:
+            train_iterator = data.BucketIterator(
+                dataset=train, batch_size=batch_size_train, repeat=False,
+                sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg)))
+        if split & Split.Validation:
+            validation_iterator = data.BucketIterator(
+                dataset=validation, batch_size=batch_size_validation, repeat=False,
+                sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg)))
+
+        return (
+            train_iterator,
+            validation_iterator,
+            source_field.vocab,
+            target_field.vocab,
+        )
