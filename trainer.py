@@ -15,9 +15,6 @@ from training.optimizer import NoamOpt
 from training.statistics_collector import StatisticsCollector
 from transformer.model import Transformer
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-os.environ['GPU_DEBUG'] = '2'
-
 class Trainer(object):
     """
     Represents a worker taking care of the training of an instance of the ``Transformer`` model.
@@ -376,6 +373,9 @@ class Trainer(object):
 
 
 if __name__ == '__main__':
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['GPU_DEBUG'] = '0'
+
     from training.profiler import gpu_profile
     sys.settrace(gpu_profile)
 
