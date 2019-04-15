@@ -1,3 +1,4 @@
+py3nvml
 torchtext>=0.3.1<0.4.0
 nltk==3.4
 numpy>=1.16<2.0

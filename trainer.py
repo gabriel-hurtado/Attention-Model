@@ -1,23 +1,28 @@
-import os
 import json
-import torch
 import logging
 import logging.config
+import os
+import sys
 from datetime import datetime
 
-from transformer.model import Transformer
-from training.optimizer import NoamOpt
-from training.loss import LabelSmoothingLoss, CrossEntropyLoss
-from training.statistics_collector import StatisticsCollector
+import torch
+
 from dataset.iwslt import IWSLTDatasetBuilder
 from dataset.language_pairs import LanguagePair
 from dataset.utils import Split
+from training.loss import LabelSmoothingLoss, CrossEntropyLoss
+from training.optimizer import NoamOpt
+from training.profiler import gpu_profile
+from training.statistics_collector import StatisticsCollector
+from transformer.model import Transformer
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['GPU_DEBUG'] = '2'
 
 
 class Trainer(object):
     """
     Represents a worker taking care of the training of an instance of the ``Transformer`` model.
-
     """
 
     def __init__(self, params):
@@ -62,11 +67,12 @@ class Trainer(object):
         assert self.src_padding == self.trg_padding, (
             "the padding token ({}) for the source vocab is not equal "
             "to the one from the target vocab ({})."
-                .format(self.src_padding,  self.trg_padding)
+                .format(self.src_padding, self.trg_padding)
         )
 
-        self.logger.info("Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
-                         .format(self.src_vocab_size, self.trg_vocab_size))
+        self.logger.info(
+            "Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
+            .format(self.src_vocab_size, self.trg_vocab_size))
 
         # pass the size of input & output vocabs to model's params
         params["model"]["src_vocab_size"] = self.src_vocab_size
@@ -86,7 +92,8 @@ class Trainer(object):
             self.loss_fn = LabelSmoothingLoss(size=self.trg_vocab_size,
                                               padding_token=self.src_padding,
                                               smoothing=params["training"]["smoothing"])
-            self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(params["training"]["smoothing"]))
+            self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(
+                params["training"]["smoothing"]))
         else:
             self.loss_fn = CrossEntropyLoss(pad_token=self.src_padding)
             self.logger.info("Using CrossEntropyLoss.")
@@ -296,8 +303,9 @@ class Trainer(object):
         fh.setLevel(logging.DEBUG)
 
         # create formatter and add it to the handlers
-        formatter = logging.Formatter(fmt='[%(asctime)s] - %(levelname)s - %(name)s >>> %(message)s',
-                                      datefmt='%Y-%m-%d %H:%M:%S')
+        formatter = logging.Formatter(
+            fmt='[%(asctime)s] - %(levelname)s - %(name)s >>> %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S')
         fh.setFormatter(formatter)
 
         # add the handler to the logger
@@ -322,8 +330,9 @@ class Trainer(object):
         self.training_stat_col.add_statistic('src_seq_length', '{:02d}')
 
         # Create the csv file to store the training statistics.
-        self.training_batch_stats_file = self.training_stat_col.initialize_csv_file(self.log_dir,
-                                                                                    'training_statistics.csv')
+        self.training_batch_stats_file = self.training_stat_col.initialize_csv_file(
+            self.log_dir,
+            'training_statistics.csv')
 
         # VALIDATION.
         # Create statistics collector for validation.
@@ -335,8 +344,9 @@ class Trainer(object):
         self.validation_stat_col.add_statistic('episode', '{:06d}')
 
         # Create the csv file to store the validation statistics.
-        self.validation_batch_stats_file = self.validation_stat_col.initialize_csv_file(self.log_dir,
-                                                                                        'validation_statistics.csv')
+        self.validation_batch_stats_file = self.validation_stat_col.initialize_csv_file(
+            self.log_dir,
+            'validation_statistics.csv')
 
     def finalize_statistics_collection(self) -> None:
         """
@@ -368,6 +378,7 @@ class Trainer(object):
 
 
 if __name__ == '__main__':
+    sys.settrace(gpu_profile)
 
     params = {
         "training": {
