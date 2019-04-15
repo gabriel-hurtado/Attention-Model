@@ -13,6 +13,9 @@ ROOT_DATASET_DIR = "resources/torchtext"
 class IWSLTDatasetBuilder():
     @staticmethod
     def masked(batch_iterator: Iterable[data.Batch]):
+        """
+        Helper generator to mask a batch
+        """
         for batch in batch_iterator:
             yield BatchMasker(batch)
 
@@ -85,11 +88,9 @@ class IWSLTDatasetBuilder():
         source_field.build_vocab(train, min_freq=min_freq)
         target_field.build_vocab(train, min_freq=min_freq)
 
-        return IWSLTDatasetBuilder.masked(
-            IWSLTDatasetBuilder.transposed(
-                data.BucketIterator(
-                    dataset=dataset, batch_size=batch_size, repeat=True,
-                    sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))
-                )
-            )
-        ), source_field.vocab, target_field.vocab
+        return (data.BucketIterator(
+            dataset=dataset, batch_size=batch_size, repeat=False,
+            sort_key=lambda x: data.interleave_keys(len(x.src), len(x.trg))),
+                source_field.vocab,
+                target_field.vocab,
+        )

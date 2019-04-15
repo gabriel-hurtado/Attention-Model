@@ -44,7 +44,7 @@ class Trainer(object):
 
         # initialize training Dataset class
         self.logger.info("Creating the training & validation dataset, may take some time...")
-        self.training_dataset, self.src_vocab, self.trg_vocab = IWSLTDatasetBuilder.build(
+        self.training_dataset_iterator, self.src_vocab, self.trg_vocab = IWSLTDatasetBuilder.build(
             language_pair=LanguagePair.fr_en,
             split=Split.Train,
             max_length=params["dataset"]["max_seq_length"],
@@ -62,12 +62,14 @@ class Trainer(object):
         self.trg_padding = self.trg_vocab.stoi[params["dataset"]["pad_token"]]
 
         # just for safety, assume that the padding token of the source vocab is always equal to the target one (for now)
-        assert self.src_padding == self.trg_padding, "the padding token ({}) for the source vocab is not equal" \
-                                                     "to the one from the target vocab ({}).".format(self.src_padding,
-                                                                                                     self.trg_padding)
+        assert self.src_padding == self.trg_padding, (
+            "the padding token ({}) for the source vocab is not equal "
+            "to the one from the target vocab ({})."
+                .format(self.src_padding,  self.trg_padding)
+        )
 
         # initialize validation Dataset class
-        self.validation_dataset, _, _ = IWSLTDatasetBuilder.build(
+        self.validation_dataset_iterator, _, _ = IWSLTDatasetBuilder.build(
             language_pair=LanguagePair.fr_en,
             split=Split.Validation,
             max_length=params["dataset"]["max_seq_length"],
@@ -138,7 +140,11 @@ class Trainer(object):
             # ensure train mode for the model
             self.model.train()
 
-            for i, batch in enumerate(self.training_dataset):
+            for i, batch in enumerate(
+                IWSLTDatasetBuilder.masked(
+                    IWSLTDatasetBuilder.transposed(
+                        self.training_dataset_iterator
+                    ))):
 
                 # "Move on" to the next episode.
                 episode += 1
@@ -184,7 +190,11 @@ class Trainer(object):
             self.model.eval()
             val_loss = 0
 
-            for i, batch in enumerate(self.validation_dataset):
+            for i, batch in enumerate(
+                IWSLTDatasetBuilder.masked(
+                    IWSLTDatasetBuilder.transposed(
+                        self.validation_dataset_iterator
+                    ))):
 
                 # Convert batch to CUDA.
                 if torch.cuda.is_available():
@@ -285,7 +295,7 @@ class Trainer(object):
 
         Specifies a ``logging.Formatter``:
             >>> logging.Formatter(fmt='[%(asctime)s] - %(levelname)s - %(name)s >>> %(message)s',
-            >>>                   datefmt='%Y-%m-%d %H:%M:%S')
+            ...                   datefmt='%Y-%m-%d %H:%M:%S')
 
         :param logfile: File used by the ``FileHandler``.
 
