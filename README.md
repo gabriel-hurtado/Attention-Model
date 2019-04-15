@@ -3,7 +3,22 @@ Project for the [Deep Learning](https://www.cc.gatech.edu/classes/AY2019/cs7643_
 
 **Public page:** [https://deepfrench.gitlab.io/deep-learning-project](https://deepfrench.gitlab.io/deep-learning-project)
 
-## Getting started
+## Downloading and running the training script
+
+From a fresh AWS instance, run the following to install everything:
+
+```bash
+bash <(curl -s https://deepfrench.gitlab.io/deep-learning-project/install.sh)
+```
+
+Then, just run the following:
+
+```bash
+conda activate python3-dl
+python trainer.py
+```
+
+## Installing
 
 ### Cloning
 

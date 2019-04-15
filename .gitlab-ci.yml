@@ -74,9 +74,9 @@ pages:
     - mkdir public
     - mv webpages/project_webpage/index.html public/index.html
     - mv webpages/progress_checkin/index.html public/progress.html
+    - cp install.sh public/install.sh
   artifacts:
     paths:
       - public
   only:
     - master
-    - feature/project-checkin
