@@ -12,13 +12,11 @@ from dataset.language_pairs import LanguagePair
 from dataset.utils import Split
 from training.loss import LabelSmoothingLoss, CrossEntropyLoss
 from training.optimizer import NoamOpt
-from training.profiler import gpu_profile
 from training.statistics_collector import StatisticsCollector
 from transformer.model import Transformer
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 os.environ['GPU_DEBUG'] = '2'
-
 
 class Trainer(object):
     """
@@ -378,6 +376,7 @@ class Trainer(object):
 
 
 if __name__ == '__main__':
+    from training.profiler import gpu_profile
     sys.settrace(gpu_profile)
 
     params = {
