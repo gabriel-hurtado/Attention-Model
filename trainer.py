@@ -76,10 +76,15 @@ class Trainer(object):
         self.model = Transformer(params["model"])
 
         if torch.cuda.is_available():
+
+            if params["training"].get("multi_gpu", False):
+                self.model = torch.nn.DataParallel(self.model)
+                self.logger.info("Multi-GPU training activated, on devices: {}".format(self.model.device_ids))
+
             self.model = self.model.cuda()
 
         # whether to save the model at every epoch or not
-        self.save_intermediate = params["training"]["save_intermediate"]
+        self.save_intermediate = params["training"].get("save_intermediate", False)
 
         # instantiate loss
         if "smoothing" in params["training"]:
@@ -375,7 +380,8 @@ if __name__ == '__main__':
             "train_batch_size": 1024,
             "valid_batch_size": 1024,
             "smoothing": 0.1,
-            "save_intermediate": False
+            "save_intermediate": False,
+            "multi_gpu": True
         },
 
         "optim": {
