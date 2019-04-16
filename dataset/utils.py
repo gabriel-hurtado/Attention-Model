@@ -32,3 +32,4 @@ class Tokenizer(object):
 class Split(Flag):
     Train = auto()
     Validation = auto()
+    Test = auto()

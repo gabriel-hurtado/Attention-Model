@@ -39,7 +39,8 @@ class Trainer(object):
         # initialize training Dataset class
         self.logger.info("Creating the training & validation dataset, may take some time...")
         (self.training_dataset_iterator, self.validation_dataset_iterator,
-         self.src_vocab, self.trg_vocab) = IWSLTDatasetBuilder.build(
+         self.test_dataset_iterator, self.src_vocab, self.trg_vocab) = (
+            IWSLTDatasetBuilder.build(
             language_pair=LanguagePair.fr_en,
             split=Split.Train | Split.Validation,
             max_length=params["dataset"]["max_seq_length"],
@@ -49,6 +50,7 @@ class Trainer(object):
             blank_token=params["dataset"]["pad_token"],
             batch_size_train=params["training"]["train_batch_size"],
             batch_size_validation=params["training"]["valid_batch_size"],
+        )
         )
 
         # get the size of the vocab sets
