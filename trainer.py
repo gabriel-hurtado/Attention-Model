@@ -30,7 +30,7 @@ class Trainer(object):
         """
 
         # configure all logging
-        self.configure_logging(training_problem_name="copy_task", params=params)
+        self.configure_logging(training_problem_name="IWSLT", params=params)
 
         # Initialize TensorBoard and statistics collection.
         self.initialize_statistics_collection()
