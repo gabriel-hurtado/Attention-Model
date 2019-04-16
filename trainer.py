@@ -394,7 +394,7 @@ if __name__ == '__main__':
         },
 
         "dataset": {
-            "max_seq_length": 7,
+            "max_seq_length": 40,  # ~ 90% of the training set
             "min_freq": 2,
             "start_token": "<s>",
             "eos_token": "</s>",
@@ -421,8 +421,23 @@ if __name__ == '__main__':
     trainer = Trainer(params)
     trainer.train()
 
-    src = torch.Tensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
-    src_mask = torch.ones(1, 1, 10)
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
 
-    predictions = trainer.model.greedy_decode(src, src_mask, start_symbol=1)
-    print(predictions)
+    # Try to predict the following sequence:
+    # first sentence in the validation dataset
+    batch = next(iter(IWSLTDatasetBuilder.masked(
+                    IWSLTDatasetBuilder.transposed(trainer.validation_dataset_iterator))))
+
+    batch.cuda()
+
+    prediction = trainer.model.greedy_decode(batch.src[0], batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=15)
+
+    target, target_sentence = "", batch.trg[0]
+    for i in target_sentence:
+        target += trainer.trg_vocab.itos[i] + " "
+
+    print("Trying to predict: {}".format(target))
+    print("Got: {}".format(prediction))
