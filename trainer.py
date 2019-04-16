@@ -75,6 +75,9 @@ class Trainer(object):
         # can now instantiate model
         self.model = Transformer(params["model"])
 
+        if params["training"].get("load_trained_model", False):
+            self.model.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
+
         if torch.cuda.is_available():
 
             if params["training"].get("multi_gpu", False):
@@ -381,7 +384,9 @@ if __name__ == '__main__':
             "valid_batch_size": 1024,
             "smoothing": 0.1,
             "save_intermediate": False,
-            "multi_gpu": True
+            "multi_gpu": True,
+            "load_trained_model": False,
+            "trained_model_checkpoint": ""
         },
 
         "optim": {
