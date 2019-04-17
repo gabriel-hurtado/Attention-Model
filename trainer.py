@@ -79,15 +79,20 @@ class Trainer(object):
         # can now instantiate model
         self.model = Transformer(params["model"])
 
+        if params["training"].get("multi_gpu", False):
+            self.model = torch.nn.DataParallel(self.model)
+            self.logger.info("Multi-GPU training activated, on devices: {}".format(self.model.device_ids))
+            self.multi_gpu = True
+        else:
+            self.multi_gpu = False
+
         if params["training"].get("load_trained_model", False):
-            self.model.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
+            if self.multi_gpu:
+                self.model.module.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
+            else:
+                self.model.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
 
         if torch.cuda.is_available():
-
-            if params["training"].get("multi_gpu", False):
-                self.model = torch.nn.DataParallel(self.model)
-                self.logger.info("Multi-GPU training activated, on devices: {}".format(self.model.device_ids))
-
             self.model = self.model.cuda()
 
         # whether to save the model at every epoch or not
@@ -185,7 +190,10 @@ class Trainer(object):
 
             # save model at end of each epoch if indicated:
             if self.save_intermediate:
-                self.model.save(self.model_dir, epoch, loss.item())
+                if self.multi_gpu:
+                    self.model.module.save(self.model_dir, epoch, loss.item())
+                else:
+                    self.model.save(self.model_dir, epoch, loss.item())
                 self.logger.info("Model exported to checkpoint.")
 
             # validate the model on the validation set
@@ -226,7 +234,11 @@ class Trainer(object):
             self.validation_stat_col.export_to_tensorboard()
 
         # always save the model at end of training
-        self.model.save(self.model_dir, epoch, loss.item())
+        if self.multi_gpu:
+            self.model.module.save(self.model_dir, epoch, loss.item())
+        else:
+            self.model.save(self.model_dir, epoch, loss.item())
+
         self.logger.info("Final model exported to checkpoint.")
 
         # training done, end statistics collection
@@ -387,7 +399,7 @@ class Trainer(object):
 if __name__ == '__main__':
     params = {
         "training": {
-            "epochs": 10,
+            "epochs": 1,
             "train_batch_size": 1024,
             "valid_batch_size": 1024,
             "smoothing": 0.1,
@@ -434,19 +446,19 @@ if __name__ == '__main__':
     trainer = Trainer(params)
     trainer.train()
 
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
-    else:
-        device = torch.device('cpu')
-
     # Try to predict the following sequence:
     # first sentence in the validation dataset
     batch = next(iter(IWSLTDatasetBuilder.masked(
                     IWSLTDatasetBuilder.transposed(trainer.validation_dataset_iterator))))
 
-    batch.cuda()
+    if torch.cuda.is_available():
+        batch.cuda()
 
-    prediction = trainer.model.greedy_decode(batch.src[0], batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=15)
+    if trainer.multi_gpu:
+        prediction = trainer.model.module.greedy_decode(batch.src[0].unsqueeze(0), batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=15)
+    else:
+        prediction = trainer.model.greedy_decode(batch.src[0].unsqueeze(0), batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>",
+                                                 stop_symbol="</s>", max_length=params["dataset"]["max_seq_length"])
 
     target, target_sentence = "", batch.trg[0]
     for i in target_sentence:
