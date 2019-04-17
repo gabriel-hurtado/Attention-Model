@@ -31,7 +31,7 @@ class Trainer(object):
         """
 
         # configure all logging
-        self.configure_logging(training_problem_name="copy_task", params=params)
+        self.configure_logging(training_problem_name="IWSLT", params=params)
 
         # Initialize TensorBoard and statistics collection.
         self.initialize_statistics_collection()
@@ -79,11 +79,19 @@ class Trainer(object):
         # can now instantiate model
         self.model = Transformer(params["model"])
 
+        if params["training"].get("load_trained_model", False):
+            self.model.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
+
         if torch.cuda.is_available():
+
+            if params["training"].get("multi_gpu", False):
+                self.model = torch.nn.DataParallel(self.model)
+                self.logger.info("Multi-GPU training activated, on devices: {}".format(self.model.device_ids))
+
             self.model = self.model.cuda()
 
         # whether to save the model at every epoch or not
-        self.save_intermediate = params["training"]["save_intermediate"]
+        self.save_intermediate = params["training"].get("save_intermediate", False)
 
         # instantiate loss
         if "smoothing" in params["training"]:
@@ -382,7 +390,10 @@ if __name__ == '__main__':
             "train_batch_size": 1024,
             "valid_batch_size": 1024,
             "smoothing": 0.1,
-            "save_intermediate": False
+            "save_intermediate": False,
+            "multi_gpu": True,
+            "load_trained_model": False,
+            "trained_model_checkpoint": ""
         },
 
         "optim": {
@@ -395,7 +406,7 @@ if __name__ == '__main__':
         },
 
         "dataset": {
-            "max_seq_length": 7,
+            "max_seq_length": 40,  # ~ 90% of the training set
             "min_freq": 2,
             "start_token": "<s>",
             "eos_token": "</s>",
@@ -422,8 +433,23 @@ if __name__ == '__main__':
     trainer = Trainer(params)
     trainer.train()
 
-    src = torch.Tensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
-    src_mask = torch.ones(1, 1, 10)
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
 
-    predictions = trainer.model.greedy_decode(src, src_mask, start_symbol=1)
-    print(predictions)
+    # Try to predict the following sequence:
+    # first sentence in the validation dataset
+    batch = next(iter(IWSLTDatasetBuilder.masked(
+                    IWSLTDatasetBuilder.transposed(trainer.validation_dataset_iterator))))
+
+    batch.cuda()
+
+    prediction = trainer.model.greedy_decode(batch.src[0], batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=15)
+
+    target, target_sentence = "", batch.trg[0]
+    for i in target_sentence:
+        target += trainer.trg_vocab.itos[i] + " "
+
+    print("Trying to predict: {}".format(target))
+    print("Got: {}".format(prediction))
