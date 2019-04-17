@@ -192,24 +192,25 @@ class Trainer(object):
             self.model.eval()
             val_loss = 0
 
-            for i, batch in enumerate(
-                IWSLTDatasetBuilder.masked(
-                    IWSLTDatasetBuilder.transposed(
-                        self.validation_dataset_iterator
-                    ))):
+            with torch.no_grad():
+                for i, batch in enumerate(
+                    IWSLTDatasetBuilder.masked(
+                        IWSLTDatasetBuilder.transposed(
+                            self.validation_dataset_iterator
+                        ))):
 
-                # Convert batch to CUDA.
-                if torch.cuda.is_available():
-                    batch.cuda()
+                    # Convert batch to CUDA.
+                    if torch.cuda.is_available():
+                        batch.cuda()
 
-                # 1. Perform forward pass.
-                logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
+                    # 1. Perform forward pass.
+                    logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
-                # 2. Evaluate loss function.
-                loss = self.loss_fn(logits, batch.trg_shifted)
+                    # 2. Evaluate loss function.
+                    loss = self.loss_fn(logits, batch.trg_shifted)
 
-                # Accumulate loss
-                val_loss += loss.item()
+                    # Accumulate loss
+                    val_loss += loss.item()
 
             # 3.1 Collect loss, episode: Log only one point per validation (for now)
             self.validation_stat_col['loss'] = val_loss / (i + 1)
