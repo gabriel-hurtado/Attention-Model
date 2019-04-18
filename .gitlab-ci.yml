@@ -9,7 +9,7 @@ before_script:
   - source venv/bin/activate
   - pip install -r requirements.txt
 
-unit tests:
+.unit tests: &unit-test-definition
   stage: test
   script:
     - pip install unittest-xml-reporting
@@ -17,14 +17,22 @@ unit tests:
   artifacts:
     reports:
       junit: junit-reports/*.xml
+
+unit tests merge request:
+  <<: *unit-test-definition
   only:
     refs:
-      - master
-      - develop
       - merge_requests
     changes:
       - "**/*.py"
       - "*.py"
+
+unit tests:
+  <<: *unit-test-definition
+  only:
+    refs:
+      - master
+      - develop
 
 # pep8 runs different tests for different Python versions
 style check:
@@ -44,7 +52,7 @@ style check:
       - "**/*.py"
       - "*.py"
 
-.checkin deliverables:
+.checkin deliverables: # Disabled since this is not needed anymore
   stage: deploy
   variables:
     GIT_LFS_SKIP_SMUDGE: "1"
@@ -94,5 +102,6 @@ pages:
   artifacts:
     paths:
       - public
+    expire_in: 20 mins
   only:
     - master
