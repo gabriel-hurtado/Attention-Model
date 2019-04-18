@@ -18,24 +18,36 @@ unit tests:
     reports:
       junit: junit-reports/*.xml
   only:
-    - master
-    - develop
-    - merge_requests
+    refs:
+      - master
+      - develop
+      - merge_requests
+    changes:
+      - "**/*.py"
+      - "*.py"
 
 # pep8 runs different tests for different Python versions
 style check:
   stage: test
+  variables:
+    GIT_LFS_SKIP_SMUDGE: "1"
   script:
     - pip install pylint
     - pylint -e all -d invalid-name,missing-docstring --confidence HIGH,INFERENCE --generated-members="numpy.*,torch.*" -f colorized ./*
     - echo "PyLint exit code:" $?
   only:
-    - master
-    - develop
-    - merge_requests
+    refs:
+      - master
+      - develop
+      - merge_requests
+    changes:
+      - "**/*.py"
+      - "*.py"
 
-checkin deliverables:
+.checkin deliverables:
   stage: deploy
+  variables:
+    GIT_LFS_SKIP_SMUDGE: "1"
   before_script:
     - pip install nbconvert
   script:
@@ -51,6 +63,8 @@ checkin deliverables:
 
 final deliverables:
   stage: deploy
+  variables:
+    GIT_LFS_SKIP_SMUDGE: "1"
   before_script:
     - pip install nbconvert
   script:
@@ -68,6 +82,8 @@ pages:
   stage: deploy
   before_script:
     - pip install nbconvert
+  variables:
+    GIT_LFS_SKIP_SMUDGE: "1"
   script:
     - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --template full --output index
     - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --template full --output index
