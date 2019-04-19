@@ -172,6 +172,8 @@ class Trainer(object):
                 # 5. Perform optimization step.
                 self.optimizer.step()
 
+                gpu_profile(frame=sys._getframe(), event='line', arg=None)
+
             # save model at end of each epoch if indicated:
             if self.save_intermediate:
                 self.model.save(self.model_dir, epoch, loss.item())
@@ -373,8 +375,8 @@ class Trainer(object):
 
 
 if __name__ == '__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    os.environ['GPU_DEBUG'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['GPU_DEBUG'] = '2'
 
     from training.profiler import gpu_profile
     sys.settrace(gpu_profile)
