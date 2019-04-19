@@ -14,9 +14,8 @@ print_tensor_sizes = False
 use_incremental = False
 
 if 'GPU_DEBUG' in os.environ:
-    gpu_profile_fn = (f"Host_{socket.gethostname()}_gpu{os.environ['GPU_DEBUG']}"
-                      f"_mem_prof-{datetime.datetime.now():%d-%b-%y-%H-%M-%S}.prof.txt")
-    print(f"profiling gpu usage to '{gpu_profile_fn}'")
+    gpu_profile_fn = f"Host_{socket.gethostname()}_gpu{os.environ['GPU_DEBUG']}_mem_prof-{datetime.datetime.now():%d-%b-%y-%H-%M-%S}.prof.txt"
+    print('profiling gpu usage to ', gpu_profile_fn)
 
 ## Global variables
 last_tensor_sizes = set()
