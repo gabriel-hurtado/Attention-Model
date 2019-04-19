@@ -26,7 +26,7 @@ filename = None
 module_name = None
 
 
-def gpu_profile(frame, event, arg):
+def gpu_profile(frame, event, message):
     # it is _about to_ execute (!)
     global last_tensor_sizes
     global last_meminfo_used
@@ -47,7 +47,8 @@ def gpu_profile(frame, event, arg):
                 with open(gpu_profile_fn, 'a+') as f:
                     f.write(f"{where_str:<50}"
                             f":{(mem_display) / 1024 ** 2:<7.1f}Mb "
-                            f"{line.rstrip()}\n")
+                            f"{line.rstrip()} "
+                            f"{str(message)}\n")
 
                     last_meminfo_used = new_meminfo_used
                     if print_tensor_sizes is True:

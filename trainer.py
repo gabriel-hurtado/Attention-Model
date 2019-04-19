@@ -142,6 +142,7 @@ class Trainer(object):
 
                 # 1. reset all gradients
                 self.optimizer.zero_grad()
+                gpu_profile(frame=sys._getframe(), event='line', message='Batch {} - Before forward pass'.format(i))
 
                 # Convert batch to CUDA.
                 if torch.cuda.is_available():
@@ -151,10 +152,13 @@ class Trainer(object):
                 logits = self.model(batch.src, batch.src_mask, batch.trg, batch.trg_mask)
 
                 # 3. Evaluate loss function.
+                gpu_profile(frame=sys._getframe(), event='line', message='Batch {} - After forward pass'.format(i))
                 loss = self.loss_fn(logits, batch.trg_shifted)
+                gpu_profile(frame=sys._getframe(), event='line', message='Batch {} - After loss computation'.format(i))
 
                 # 4. Backward gradient flow.
                 loss.backward()
+                gpu_profile(frame=sys._getframe(), event='line', message='Batch {} - After loss.backward()'.format(i))
 
                 # 4.1. Export to csv - at every step.
                 # collect loss, episode
@@ -172,7 +176,7 @@ class Trainer(object):
                 # 5. Perform optimization step.
                 self.optimizer.step()
 
-                gpu_profile(frame=sys._getframe(), event='line', arg=None)
+                gpu_profile(frame=sys._getframe(), event='line', message='Batch {} - After optimizer.step()'.format(i))
 
             # save model at end of each epoch if indicated:
             if self.save_intermediate:
@@ -376,7 +380,7 @@ class Trainer(object):
 
 if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    os.environ['GPU_DEBUG'] = '2'
+    os.environ['GPU_DEBUG'] = '0'
 
     from training.profiler import gpu_profile
 

@@ -21,7 +21,8 @@ else:
     LongTensor = torch.LongTensor
     IntTensor = torch.IntTensor
 
-
+from training.profiler import gpu_profile
+import sys
 class Transformer(nn.Module):
     """
     Main class for the Transformer model.
@@ -132,13 +133,13 @@ class Transformer(nn.Module):
 
         :return: Logits, of shape (batch_size, out_seq_len, d_model)
         """
-
+        gpu_profile(frame=sys._getframe(), event='line', message='Start of forward pass')
         # 1. embed the input batch: have to move input sequences to torch.*.LongTensor
         src_sequences = self.src_embeddings(src_sequences.type(LongTensor))
-
+        gpu_profile(frame=sys._getframe(), event='line', message='After SRC embedding')
         # 2. encoder stack
         encoder_output = self.encoder(src=src_sequences, mask=src_mask, verbose=False)
-
+        gpu_profile(frame=sys._getframe(), event='line', message='After encoder stack')
         # 3. get subsequent mask to hide subsequent positions in the decoder.
         # self_mask = subsequent_mask(trg_sequences.shape[1])
 
@@ -149,13 +150,17 @@ class Transformer(nn.Module):
 
         # 4. embed the output batch
         trg_sequences = self.trg_embeddings(trg_sequences.type(LongTensor))
+        gpu_profile(frame=sys._getframe(), event='line', message='After TRG embedding')
 
         # 4. decoder stack
         decoder_output = self.decoder(x=trg_sequences, memory=encoder_output,
                                       self_mask=trg_mask, memory_mask=src_mask)
+        gpu_profile(frame=sys._getframe(), event='line', message='After decoder stack')
 
         # 5. classifier
         logits = self.classifier(decoder_output)
+        gpu_profile(frame=sys._getframe(), event='line', message='After classifier')
+
 
         return logits
 
