@@ -379,7 +379,6 @@ if __name__ == '__main__':
     os.environ['GPU_DEBUG'] = '2'
 
     from training.profiler import gpu_profile
-    sys.settrace(gpu_profile)
 
     params = {
         "training": {
@@ -424,11 +423,12 @@ if __name__ == '__main__':
                 'dropout': 0.1}
         }
     }
+    sys.settrace(gpu_profile)
     trainer = Trainer(params)
     trainer.train()
 
-    src = torch.Tensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
-    src_mask = torch.ones(1, 1, 10)
-
-    predictions = trainer.model.greedy_decode(src, src_mask, start_symbol=1)
-    print(predictions)
+    # src = torch.Tensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
+    # src_mask = torch.ones(1, 1, 10)
+    #
+    # predictions = trainer.model.greedy_decode(src, src_mask, start_symbol=1)
+    # print(predictions)
