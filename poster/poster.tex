@@ -20,8 +20,41 @@
 
 % Defines the color used for content box headers
 \definecolor{lightblue}{cmyk}{0.83,0.24,0,0.16}
+\definecolor{DarkBlue}{cmyk}{1,0.65,0.22,0.80} % Georgia Tech Pantone® Dark Blue
+\definecolor{TechGold}{cmyk}{0.13,0.19,0.62,0.28} % Georgia Tech Pantone® Tech Gold
 \definecolor{ghostwhite}{rgb}{0.97, 0.97, 1.0}
 \definecolor{lightseagreen}{rgb}{0.13, 0.7, 0.67}
+
+
+\background{
+  \begin{tikzpicture}[remember picture,overlay]%
+    \fill [fill=bgColorOne] (current page.north west) rectangle(current page.south east);
+    \fill [fill=TechGold] (current page.north west) rectangle(23,25.85);
+    \fill [fill=DarkBlue] (current page.north west) rectangle(23,26);
+  \end{tikzpicture}%
+}
+
+\makeatletter             %Needed to include code in main file
+\renewcommand\@maketitle{%
+\null                 %Sets position marker
+{
+\color{ghostwhite}\sffamily\bfseries\Huge    %Set title font and colour
+\@title \par}%
+\vskip 0.6em%
+{
+\color{white}\sffamily\large        %Set author font and colour
+\lineskip .5em%
+\begin{tabular}[t]{c}%
+\@author
+\end{tabular}
+\par}%
+\vskip 1cm
+\par
+}
+\makeatother
+
+\title{\raggedright Learning about the Attention Mechanism and the Transformer model}
+\author{Baptiste~\textsc{Amato} \and Alexis~\textsc{Durocher}\and Gabriel~\textsc{Hurtado} \newline \and Alexandre~\textsc{Jouandin} \and Vincent~\textsc{Marois}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Begin of Document
@@ -30,7 +63,6 @@
 
 \begin{document}
 
-\hyphenation{resolution occlusions}
 %%
 \begin{poster}%
   % Poster Options
@@ -42,48 +74,45 @@
   % Color style
   bgColorOne=ghostwhite,
   bgColorTwo=white,
-  borderColor=lightblue,
-  headerColorOne=lightblue,
-  headerColorTwo=lightblue,
+  borderColor=DarkBlue!80,
+  headerColorOne=DarkBlue,
+  headerColorTwo=DarkBlue,
   headerFontColor=white,
   boxColorOne=white,
-  boxColorTwo=lightblue,
+  boxColorTwo=DarkBlue!80,
   % Format of textbox
-  textborder=rounded,
-%  textborder=faded,
+  textborder=roundedsmall,
   % Format of text header
-  eyecatcher=true,
+  eyecatcher=false,
   headerborder=closed,
   columns=2,
   headerheight=4cm,
 %  textfont=\sc, An example of changing the text font
-  headershape=rounded,
-  headershade=shadelr,
+  headershape=smallrounded,
+  headershade=plain,
   headerfont=\Large\bf, %Sans Serif
   textfont={\setlength{\parindent}{1.5em}\large},
   boxshade=plain,
 %  background=shade-tb,
-  background=plain,
-  linewidth=1pt
+  background=user,
+  linewidth=0.5pt
   }
   { % Left Eye Catcher - GT logo
 	\includegraphics[width=3.5cm]{img/gt-logo-gold.png}
   }
-  % Title
-  	{\bf{Learning about the Attention Mechanism and the Transformer model}}
-  % Authors
-  {\textbf{\null\hfill Baptiste Amato  \hfill Alexis Durocher \hfill Gabriel Hurtado \hfill\null}\\
-  	\vspace{-0.3em }
-	\textbf{\null\hfill Alexandre Jouandin \hfill Vincent Marois \hfill\null}\\
-
-  %\texttt{\large\{baptiste.amato, adurocher3, gabriel.hurtado, alexandre.jouandin, vincent.marois\}@gatech.edu}\\
-
-	{\large\underline{Spring 19 -- CS 7643 Deep Learning -- Prof. Zsolt Kira}}\\
+  {% Title
+    \maketitle
+    %{\sf \VERYLarge \color{white} \bf{Learning about the Attention Mechanism and the Transformer model}}
   }
-
-  %{ % Right Eye Catcher
-	%\includegraphics[width=3.5cm]{}
-  %}
+  {% Authors
+   %\color{white} {\null\hfill Baptiste Amato  \hfill Alexis Durocher \hfill Gabriel Hurtado \hfill\null}\\
+   %	\vspace{-0.3em }
+	 %{\null\hfill Alexandre Jouandin \hfill Vincent Marois \hfill\null}\\
+	%{\color{white} \large\underline{Spring 19 -- CS 7643 Deep Learning -- Prof. Zsolt Kira}}
+  }
+  { % University Logo
+	\includegraphics[width=3.5cm,keepaspectratio]{img/gatech_logo.pdf}
+  }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

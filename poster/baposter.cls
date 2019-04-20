@@ -787,7 +787,7 @@
   \debug{Format}%
   % Set default for columns if unset (4 for landscape, 3 for portrait)
   \ifthenelse{\equal{\baposter@columns}{}}{%
-    \renewcommand{\baposter@columns}{\if@landscape3\else2\fi}%
+    \renewcommand{\baposter@columns}{\if@landscape4\else3\fi}%
   }{}
 %
   \debug{Columns: \baposter@columns}%
@@ -948,7 +948,7 @@
         }{ %% height=auto or fixed%
           \debug{height=auto or fixed}%
           \path[shape=coordinate] (\baposter@box@name nw) ++(\boxwidth,-\boxheight)                                coordinate(\baposter@box@name se);%
-	  }}}}}%
+    }}}}}%
 %
         %
     % Set coordinates relative to nw,se%
@@ -1066,7 +1066,7 @@
         \end{minipage}
       };%
     \else% Has no eye catcher
-      \draw (image.east) node(title)[anchor=west]  { {\begin{minipage}{\baposter@titleimage@textwidth}{\bfseries\Huge #3}\\{\Large #4}\end{minipage}} };%
+      \draw (image.east) node(title)[anchor=west]  { {\begin{minipage}{0.88\baposter@titleimage@textwidth}{#3}{#4}\end{minipage}} };%
     \fi
   }% END poster begin
 % The body
