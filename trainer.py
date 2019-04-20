@@ -399,7 +399,7 @@ class Trainer(object):
 if __name__ == '__main__':
     params = {
         "training": {
-            "epochs": 1,
+            "epochs": 3,
             "train_batch_size": 1024,
             "valid_batch_size": 1024,
             "smoothing": 0.1,
