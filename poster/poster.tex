@@ -123,8 +123,8 @@
 	\begin{itemize}
 	  \compresslist
 	  \item IWSLT 2016 TED talk translation task (French $\rightarrow$ English),
-	  \item 220k train samples, 1025 validation, XXX test,
-	  \item Average sentence length: 20 (train) -- 21 (val).
+	  \item 220k train samples, 1025 validation, 1305 test,
+	  \item Avg. sentence length: 20 (train) -- 21 (val) -- 19 (test).
 	\end{itemize}
 
 	\vspace{-20pt}
@@ -177,13 +177,13 @@
 	\begin{itemize}
 		\compresslist
 		\item Model converging on the IWSLT dataset,
-    \item Early inference tests not satisfying: Beam search should help.
+    \item Early inference tests not satisfying: Further training \& Beam Search should help.
 	\end{itemize}
   \vspace{-20pt}
 	\begin{figure}[H]
 		\centering
 		\includegraphics[width=\textwidth]{img/training.png}
-		\caption{Training and Validation loss on 90\% of the IWSLT dataset.}
+		\caption{Training and Validation loss on 90\% of the IWSLT dataset (15 epochs).}
 		\label{fig:training}
 	\end{figure}
 
