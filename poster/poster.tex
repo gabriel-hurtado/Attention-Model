@@ -2,7 +2,7 @@
 
 % Encoding.
 \usepackage[utf8]{inputenc}
-\usepackage{graphicx, wrapfig} % Required for including images
+\usepackage{graphicx} % Required for including images
 \usepackage{float}
 \usepackage{hyperref}
 \usepackage{helvet}
@@ -18,13 +18,10 @@
 \setlength{\parsep}{0pt}
 }
 
-% Defines the color used for content box headers
-\definecolor{lightblue}{cmyk}{0.83,0.24,0,0.16}
+% Defines the colors used for content box headers
 \definecolor{DarkBlue}{cmyk}{1,0.65,0.22,0.80} % Georgia Tech Pantone® Dark Blue
 \definecolor{TechGold}{cmyk}{0.13,0.19,0.62,0.28} % Georgia Tech Pantone® Tech Gold
 \definecolor{ghostwhite}{rgb}{0.97, 0.97, 1.0}
-\definecolor{lightseagreen}{rgb}{0.13, 0.7, 0.67}
-
 
 \background{
   \begin{tikzpicture}[remember picture,overlay]%
@@ -97,25 +94,18 @@
   background=user,
   linewidth=0.5pt
   }
-  { % Left Eye Catcher - GT logo
-	\includegraphics[width=3.5cm]{img/gt-logo-gold.png}
+  { % Left Eye Catcher
   }
   {% Title
     \maketitle
-    %{\sf \VERYLarge \color{white} \bf{Learning about the Attention Mechanism and the Transformer model}}
   }
   {% Authors
-   %\color{white} {\null\hfill Baptiste Amato  \hfill Alexis Durocher \hfill Gabriel Hurtado \hfill\null}\\
-   %	\vspace{-0.3em }
-	 %{\null\hfill Alexandre Jouandin \hfill Vincent Marois \hfill\null}\\
-	%{\color{white} \large\underline{Spring 19 -- CS 7643 Deep Learning -- Prof. Zsolt Kira}}
   }
-  { % University Logo
+  { % Right Eye Catcher - University Logo
 	\includegraphics[width=3.5cm,keepaspectratio]{img/gatech_logo.pdf}
   }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \headerbox{Motivation}{name=motivations,column=0,row=0}{
 
 	\begin{itemize}
@@ -167,13 +157,15 @@
   \begin{itemize}
     \compresslist
     \item Encoder-Decoder architecture,
-    \item Less computation-heavy than RNNs for translation.
+    \item Less computation-heavy than RNNs for translation,
+    \item Multi-Head Attention: Allows model to jointly attend to information from different
+    representation subspaces.
   \end{itemize}
 
 }
 
 \headerbox{References}{name=links, column=0, below=model}{
-  \small
+  \scriptsize
   \vspace{-8pt}
   \renewcommand{\refname}{}
   \bibliographystyle{alpha}
@@ -184,13 +176,14 @@
 \headerbox{Experiments}{name=experiments, column=1}{
 	\begin{itemize}
 		\compresslist
-		\item Model working on the copy task (\texttt{inputs = outputs})
+		\item Model converging on the IWSLT dataset,
+    \item Early inference tests not satisfying: Beam search should help.
 	\end{itemize}
   \vspace{-20pt}
 	\begin{figure}[H]
 		\centering
 		\includegraphics[width=\textwidth]{img/training.png}
-		\caption{Training and Validation loss on 40\% of the IWSLT dataset.}
+		\caption{Training and Validation loss on 90\% of the IWSLT dataset.}
 		\label{fig:training}
 	\end{figure}
 
@@ -207,9 +200,9 @@
 \vspace{-20pt}
 \begin{itemize}
   \compresslist
-  \item Initial increase of memory use, particularly when computing loss
-  \item Stabilization over epoch at $\sim$6 Gb
-  \item[$\Rightarrow$] PyTorch most likely optimizing in the background
+  \item Initial increase of memory use, particularly when computing loss,
+  \item Stabilization over epoch at $\sim$6 Gb,
+  \item[$\Rightarrow$] \texttt{PyTorch} most likely optimizing in the background.
 \end{itemize}
 
 % \begin{figure}
