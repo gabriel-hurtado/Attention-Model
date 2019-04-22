@@ -83,7 +83,7 @@
   eyecatcher=false,
   headerborder=closed,
   columns=2,
-  headerheight=4cm,
+  headerheight=3.9cm,
 %  textfont=\sc, An example of changing the text font
   headershape=smallrounded,
   headershade=plain,
@@ -112,8 +112,7 @@
 	  \compresslist
 	  \item Transformer~\cite{vaswani2017attention} model is a SoTA Machine Translation model,
 	  \item No recurrence, only uses the Attention Mechanism~\cite{bahdanau2014neural},
-	  \item Known to be difficult to implement correctly,
-	  \item[$\Rightarrow$] What can we learn about the model?
+	  \item[$\Rightarrow$] Can we reproduce the paper's results with our implementation and what can we learn about the model?
 	\end{itemize}
 
 }
@@ -146,7 +145,7 @@
 }
 
 \headerbox{The Transformer Model}{name=model, column=0, below=dataset}{
-
+  \vspace{-10pt}
   \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{img/transformer.png}
@@ -164,7 +163,7 @@
 
 }
 
-\headerbox{References}{name=links, column=0, below=model}{
+\headerbox{References}{name=references, column=0, below=model}{
   \scriptsize
   \vspace{-8pt}
   \renewcommand{\refname}{}
@@ -215,10 +214,16 @@
 
 }
 
-\headerbox{Conclusion}{name=results, column=1, below=memory-use}{
-\lipsum[2]
-}
+\headerbox{Challenges}{name=challenges, column=1, below=memory-use}{
 
+\begin{itemize}
+  \compresslist
+  \item Heavy model (65M parameters) \& Aggregation of multiple, fine-tuned specifications $\Rightarrow$ Non-trivial training,
+  \item Non-intuitive training behavior: "No recurrence", but stack of layers and use of subsequent masking on an additional dimension,
+  \item Inference is nonetheless step-by-step,
+  \item Question of reproducibility and transparency remains open.
+\end{itemize}
+}
 
 
 \end{poster}
