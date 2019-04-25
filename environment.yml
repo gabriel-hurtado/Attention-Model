@@ -4,11 +4,12 @@ channels:
   - conda-forge
   - pytorch
 dependencies:  # will be installed by conda
-  - python=3
-  - pytorch=1.0.1
+  - python>=3.7
+  - pytorch>=1.0.0<1.1
   - torchvision=0.2.2
-  - numpy=1.16
-  - nltk=3.4
-  - tensorboardx=1.6
-- pip:  # will be installed by pip
-  - torchtext=0.3.1
+  - numpy>=1.16<2.0
+  - nltk>=3.4
+  - tensorboardx>=1.6
+  - pip
+  - pip:  # will be installed by pip
+    - torchtext>=0.3.1<0.4.0
