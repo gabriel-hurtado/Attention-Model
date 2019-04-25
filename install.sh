@@ -9,5 +9,5 @@ git clone git@gitlab.com:DeepFrench/deep-learning-project.git
 cd deep-learning-project/
 
 # create conda env from environment file
-conda env create -f environment.yml -y
+conda env create -f environment.yml
 
