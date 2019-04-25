@@ -1,4 +1,5 @@
 import json
+import random
 import logging
 import logging.config
 import os
@@ -31,7 +32,12 @@ class Trainer(object):
         """
 
         # configure all logging
-        self.configure_logging(training_problem_name="IWSLT", params=params)
+        self.configure_logging(training_problem_name="IWSLT")
+
+        # set all seeds
+        self.set_random_seeds(pytorch_seed=params["settings"]["pytorch_seed"],
+                              numpy_seed=params["settings"]["numpy_seed"],
+                              random_seed=params["settings"]["random_seed"])
 
         # Initialize TensorBoard and statistics collection.
         self.initialize_statistics_collection()
@@ -120,6 +126,12 @@ class Trainer(object):
 
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
+
+        # save the configuration as a json file in the experiments dir
+        with open(self.log_dir + 'params.json', 'w') as fp:
+            json.dump(params, fp)
+
+        self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
 
         self.logger.info('Experiment setup done.')
 
@@ -245,7 +257,7 @@ class Trainer(object):
         self.finalize_statistics_collection()
         self.finalize_tensorboard()
 
-    def configure_logging(self, training_problem_name: str, params: dict) -> None:
+    def configure_logging(self, training_problem_name: str) -> None:
         """
         Takes care of the initialization of logging-related objects:
 
@@ -297,12 +309,6 @@ class Trainer(object):
         os.makedirs(self.model_dir, exist_ok=False)
 
         self.logger.info('Model folder {} created.'.format(self.model_dir))
-
-        # save the configuration as a json file in the experiments dir
-        with open(self.log_dir + 'params.json', 'w') as fp:
-            json.dump(params, fp)
-
-        self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
 
     def add_file_handler_to_logger(self, logfile: str) -> None:
         """
@@ -387,13 +393,56 @@ class Trainer(object):
         self.validation_writer = SummaryWriter(self.log_dir + '/validation')
         self.validation_stat_col.initialize_tensorboard(self.validation_writer)
 
-    def finalize_tensorboard(self):
+    def finalize_tensorboard(self) -> None:
         """
         Finalizes the operation of TensorBoard writers by closing them.
         """
         # Close the TensorBoard writers.
         self.training_writer.close()
         self.validation_writer.close()
+
+    def set_random_seeds(self, pytorch_seed: int, numpy_seed: int, random_seed: int) -> None:
+        """
+        Set all random seeds to ensure the reproducibility of the experiments.
+        Notably:
+
+        - Set the random seed of Pytorch (seed the RNG for all devices (both CPU and CUDA):
+
+            >>> torch.manual_seed(pytorch_seed)
+
+        - When running on the CuDNN backend, two further options must be set:
+
+            >>> torch.backends.cudnn.deterministic = True
+            >>> torch.backends.cudnn.benchmark = False
+
+        - Set the random seed of numpy:
+
+            >>> np.random.seed(numpy_seed)
+
+        - Finally, we initialize the random number generator:
+
+            >>> random.seed(random_seed)
+
+        """
+
+        # set pytorch seed
+        torch.manual_seed(pytorch_seed)
+
+        # set deterministic CuDNN
+        if torch.cuda.is_available():
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+
+        # set numpy seed
+        import numpy
+        numpy.random.seed(numpy_seed)
+
+        # set the state of the random number generator:
+        random.seed(random_seed)
+
+        self.logger.info("torch seed was set to {}".format(pytorch_seed))
+        self.logger.info("numpy seed was set to {}".format(numpy_seed))
+        self.logger.info("random seed was set to {}".format(random_seed))
 
 
 if __name__ == '__main__':
@@ -403,10 +452,16 @@ if __name__ == '__main__':
             "train_batch_size": 1024,
             "valid_batch_size": 1024,
             "smoothing": 0.1,
-            "save_intermediate": False,
-            "multi_gpu": True,
             "load_trained_model": False,
             "trained_model_checkpoint": ""
+        },
+
+        "settings": {
+            "pytorch_seed": 0,
+            "numpy_seed": 0,
+            "random_seed": 0,
+            "save_intermediate": False,
+            "multi_gpu": True
         },
 
         "optim": {
