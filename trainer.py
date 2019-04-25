@@ -32,7 +32,7 @@ class Trainer(object):
         """
 
         # configure all logging
-        self.configure_logging(training_problem_name="IWSLT", params=params)
+        self.configure_logging(training_problem_name="IWSLT")
 
         # set all seeds
         self.set_random_seeds(pytorch_seed=params["settings"]["pytorch_seed"],
@@ -257,7 +257,7 @@ class Trainer(object):
         self.finalize_statistics_collection()
         self.finalize_tensorboard()
 
-    def configure_logging(self, training_problem_name: str, params: dict) -> None:
+    def configure_logging(self, training_problem_name: str) -> None:
         """
         Takes care of the initialization of logging-related objects:
 
@@ -393,7 +393,7 @@ class Trainer(object):
         self.validation_writer = SummaryWriter(self.log_dir + '/validation')
         self.validation_stat_col.initialize_tensorboard(self.validation_writer)
 
-    def finalize_tensorboard(self):
+    def finalize_tensorboard(self) -> None:
         """
         Finalizes the operation of TensorBoard writers by closing them.
         """
