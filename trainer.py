@@ -127,6 +127,12 @@ class Trainer(object):
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
 
+        # save the configuration as a json file in the experiments dir
+        with open(self.log_dir + 'params.json', 'w') as fp:
+            json.dump(params, fp)
+
+        self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
+
         self.logger.info('Experiment setup done.')
 
     def train(self):
@@ -303,12 +309,6 @@ class Trainer(object):
         os.makedirs(self.model_dir, exist_ok=False)
 
         self.logger.info('Model folder {} created.'.format(self.model_dir))
-
-        # save the configuration as a json file in the experiments dir
-        with open(self.log_dir + 'params.json', 'w') as fp:
-            json.dump(params, fp)
-
-        self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
 
     def add_file_handler_to_logger(self, logfile: str) -> None:
         """
