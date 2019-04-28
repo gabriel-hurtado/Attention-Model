@@ -14,6 +14,7 @@ from training.loss import LabelSmoothingLoss, CrossEntropyLoss
 from training.optimizer import NoamOpt
 from training.statistics_collector import StatisticsCollector
 from transformer.model import Transformer
+from google.cloud import storage
 
 
 class Trainer(object):
@@ -83,7 +84,7 @@ class Trainer(object):
         params["model"]["tgt_vocab_size"] = self.trg_vocab_size
 
         # can now instantiate model
-        self.model = Transformer(params["model"])
+        self.model = Transformer(params["model"])  # type: Transformer
 
         if params["training"].get("multi_gpu", False):
             self.model = torch.nn.DataParallel(self.model)
@@ -99,7 +100,7 @@ class Trainer(object):
                 self.model.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
 
         if torch.cuda.is_available():
-            self.model = self.model.cuda()
+            self.model = self.model.cuda()  # type: Transformer
 
         # whether to save the model at every epoch or not
         self.save_intermediate = params["training"].get("save_intermediate", False)
@@ -145,6 +146,7 @@ class Trainer(object):
         """
         # Reset the counter.
         episode = -1
+        val_loss = 0.
 
         for epoch in range(self.epochs):
 
@@ -210,7 +212,7 @@ class Trainer(object):
 
             # validate the model on the validation set
             self.model.eval()
-            val_loss = 0
+            val_loss = 0.
 
             with torch.no_grad():
                 for i, batch in enumerate(
@@ -246,16 +248,28 @@ class Trainer(object):
             self.validation_stat_col.export_to_tensorboard()
 
         # always save the model at end of training
-        if self.multi_gpu:
-            self.model.module.save(self.model_dir, epoch, loss.item())
+        if "save_dir" in params["settings"]:
+            gcs_save_dir = params["settings"]["save_dir"]
+            model_name = params["settings"]["model_name"]
+            if gcs_save_dir is not None:
+                if self.multi_gpu:
+                    filename = self.model.module.save(self.model_dir, epoch, loss.item(), model_name=model_name)
+                else:
+                    filename = self.model.save(self.model_dir, epoch, loss.item(), model_name=model_name)
+                data_utils.save_model(gcs_save_dir, filename)
         else:
-            self.model.save(self.model_dir, epoch, loss.item())
+            if self.multi_gpu:
+                self.model.module.save(self.model_dir, epoch, loss.item())
+            else:
+                self.model.save(self.model_dir, epoch, loss.item())
 
         self.logger.info("Final model exported to checkpoint.")
 
         # training done, end statistics collection
         self.finalize_statistics_collection()
         self.finalize_tensorboard()
+
+        return val_loss
 
     def configure_logging(self, training_problem_name: str) -> None:
         """
@@ -444,6 +458,21 @@ class Trainer(object):
         self.logger.info("numpy seed was set to {}".format(numpy_seed))
         self.logger.info("random seed was set to {}".format(random_seed))
 
+def save_model(job_dir, model_name):
+    """Saves the model to Google Cloud Storage"""
+    # Example: job_dir = 'gs://BUCKET_ID/hptuning_sonar/1'
+    job_dir = job_dir.replace('gs://', '')  # Remove the 'gs://'
+    # Get the Bucket Id
+    bucket_id = job_dir.split('/')[0]
+    # Get the path. Example: 'hptuning_sonar/1'
+    bucket_path = job_dir.lstrip('{}/'.format(bucket_id))
+
+    # Upload the model to GCS
+    bucket = storage.Client().bucket(bucket_id)
+    blob = bucket.blob('{}/{}'.format(
+        bucket_path,
+        model_name))
+    blob.upload_from_filename(model_name)
 
 if __name__ == '__main__':
     params = {

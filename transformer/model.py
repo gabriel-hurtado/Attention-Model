@@ -1,3 +1,5 @@
+from os.path import join
+
 import torch
 import torch.nn as nn
 from datetime import datetime
@@ -227,7 +229,7 @@ class Transformer(nn.Module):
         # 10. return prediction
         return translation
 
-    def save(self, model_dir: str, epoch_idx: int, loss_value: float) -> None:
+    def save(self, model_dir: str, epoch_idx: int, loss_value: float, model_name: str = None) -> str:
         """
         Method to save a model along with a couple of information: number of training epochs and reached loss.
 
@@ -238,18 +240,25 @@ class Transformer(nn.Module):
         :param epoch_idx: Epoch number.
 
         :param loss_value: Reached loss value at end of epoch ``epoch_idx``.
+
+        :returns: The path to the file
         """
 
         # Checkpoint to be saved.
-        chkpt = {'name': 'Transformer',
-                 'state_dict': self.state_dict(),
-                 'model_timestamp': datetime.now(),
-                 'epoch': epoch_idx,
-                 'loss': loss_value
-                 }
+        chkpt = {
+            'name': 'Transformer',
+            'state_dict': self.state_dict(),
+            'model_timestamp': datetime.now(),
+            'epoch': epoch_idx,
+            'loss': loss_value,
+        }
 
-        filename = model_dir + 'model_epoch_{}.pt'.format(epoch_idx)
+        if model_name is None:
+            model_name = f"model_epoch_{epoch_idx}.pt"
+
+        filename = join(model_dir, model_name)
         torch.save(chkpt, filename)
+        return filename
 
     def load(self, checkpoint_file, logger) -> None:
         """
