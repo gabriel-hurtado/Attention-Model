@@ -33,6 +33,7 @@ class Trainer(object):
             - Initialize the model, dataset, loss, optimizer
             - log statistics (epoch, elapsed time, BLEU score etc.)
         """
+        self.google_cloud_env = HYPERTUNER is not None
 
         # configure all logging
         self.configure_logging(training_problem_name="IWSLT")
@@ -131,11 +132,19 @@ class Trainer(object):
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
 
-        # save the configuration as a json file in the experiments dir
-        with open(self.log_dir + 'params.json', 'w') as fp:
-            json.dump(params, fp)
+        if self.google_cloud_env:
+            assert "save_dir" in params["settings"] and "model_name" in params["settings"], \
+                "Expected parameters 'save_dir' and 'model_name'."
+            self.gcs_save_dir = params["settings"]["save_dir"]
+            self.model_name = params["settings"]["model_name"]
+        else:
+            self.gcs_save_dir = None
+            self.model_name = None
+            # save the configuration as a json file in the experiments dir
+            with open(self.log_dir + 'params.json', 'w') as fp:
+                json.dump(params, fp)
+            self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
 
-        self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
 
         self.logger.info('Experiment setup done.')
 
@@ -250,24 +259,27 @@ class Trainer(object):
             # 3.3 Export to Tensorboard
             self.validation_stat_col.export_to_tensorboard()
 
-            # 3.4 Export to Hypertune
-            if HYPERTUNER is not None:
+            # 3.4 Save model on GCloud
+            if self.google_cloud_env:
+                if self.gcs_save_dir is not None:
+                    if self.multi_gpu:
+                        filename = self.model.module.save(self.model_dir, epoch, loss.item(),
+                                                          model_name=self.model_name)
+                    else:
+                        filename = self.model.save(self.model_dir, epoch, loss.item(),
+                                                   model_name=self.model_name)
+                    save_model(self.gcs_save_dir, filename)
+                else:
+                    self.logger.warning("GCS save dir is None. Skipping save for this epoch.")
+                # 3.4.b Export to Hypertune
+                assert HYPERTUNER is not None
                 HYPERTUNER.report_hyperparameter_tuning_metric(
                     hyperparameter_metric_tag='validation_loss',
                     metric_value=val_loss,
                     global_step=epoch)
 
         # always save the model at end of training
-        if "save_dir" in params["settings"]:
-            gcs_save_dir = params["settings"]["save_dir"]
-            model_name = params["settings"]["model_name"]
-            if gcs_save_dir is not None:
-                if self.multi_gpu:
-                    filename = self.model.module.save(self.model_dir, epoch, loss.item(), model_name=model_name)
-                else:
-                    filename = self.model.save(self.model_dir, epoch, loss.item(), model_name=model_name)
-                data_utils.save_model(gcs_save_dir, filename)
-        else:
+        if not self.google_cloud_env:
             if self.multi_gpu:
                 self.model.module.save(self.model_dir, epoch, loss.item())
             else:
@@ -281,7 +293,7 @@ class Trainer(object):
 
         return val_loss
 
-    def configure_logging(self, training_problem_name: str) -> None:
+    def configure_logging(self, training_problem_name: str, logger_config = None) -> None:
         """
         Takes care of the initialization of logging-related objects:
 
@@ -295,20 +307,23 @@ class Trainer(object):
         """
         # instantiate logger
         # Load the default logger configuration.
-        logger_config = {'version': 1,
-                         'disable_existing_loggers': False,
-                         'formatters': {
-                             'simple': {
-                                 'format': '[%(asctime)s] - %(levelname)s - %(name)s >>> %(message)s',
-                                 'datefmt': '%Y-%m-%d %H:%M:%S'}},
-                         'handlers': {
-                             'console': {
-                                 'class': 'logging.StreamHandler',
-                                 'level': 'INFO',
-                                 'formatter': 'simple',
-                                 'stream': 'ext://sys.stdout'}},
-                         'root': {'level': 'DEBUG',
-                                  'handlers': ['console']}}
+        if logger_config is None:
+            logger_config = {'version': 1,
+                             'disable_existing_loggers': False,
+                             'formatters': {
+                                 'simple': {
+                                     'format': '[%(asctime)s] - %(levelname)s - %(name)s >>> %(message)s',
+                                     'datefmt': '%Y-%m-%d %H:%M:%S'}},
+                             'handlers': {
+                                 'console': {
+                                     'class': 'logging.StreamHandler',
+                                     'level': 'INFO',
+                                     'formatter': 'simple',
+                                     'stream': 'ext://sys.stdout'}},
+                             'root': {'level': 'DEBUG',
+                                      'handlers': ['console']}}
+            if self.google_cloud_env:
+                logger_config['formatters']['simple'] = "%(name)s >>> %(message)s"
 
         logging.config.dictConfig(logger_config)
 

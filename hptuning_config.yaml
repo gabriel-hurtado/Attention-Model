@@ -16,8 +16,8 @@
 trainingInput:
   hyperparameters:
     goal: MINIMIZE
-    maxTrials: 15
-    maxParallelTrials: 7
+    maxTrials: 30
+    maxParallelTrials: 10
     hyperparameterMetricTag: validation_loss
     enableTrialEarlyStopping: TRUE
     params:
@@ -26,13 +26,23 @@ trainingInput:
       minValue: 3
       maxValue: 15
       scaleType: UNIT_LINEAR_SCALE
+    - parameterName: warmup
+      type: INTEGER
+      minValue: 2000
+      maxValue: 10000
+      scaleType: UNIT_LINEAR_SCALE
+    - parameterName: smoothing
+      type: DOUBLE
+      minValue: 0.05
+      maxValue: 0.25
+      scaleType: UNIT_LINEAR_SCALE
     - parameterName: beta0
       type: DOUBLE
-      minValue: 0.8
-      maxValue: 1.0
+      minValue: 0.87
+      maxValue: 0.99
       scaleType: UNIT_LINEAR_SCALE
     - parameterName: beta1
       type: DOUBLE
       minValue: 0.9
-      maxValue: 1.0
+      maxValue: 0.99
       scaleType: UNIT_LINEAR_SCALE

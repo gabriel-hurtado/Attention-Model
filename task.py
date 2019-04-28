@@ -36,6 +36,14 @@ def get_args():
                         type=float,
                         default=0.98,
                         help='Beta1 parameter (default: 0.98)')
+    parser.add_argument('--warmup',  # Specified in the config file
+                        type=int,
+                        default=2000,
+                        help='Warmup parameter (default: 2000)')
+    parser.add_argument('--smoothing',  # Specified in the config file
+                        type=float,
+                        default=0.1,
+                        help='Smoothing parameter (default: 0.1)')
     parser.add_argument('--seed',
                         type=int,
                         default=0,
@@ -53,7 +61,7 @@ if __name__ == '__main__':
             "epochs": args.epochs,
             "train_batch_size": args.batch_size,
             "valid_batch_size": args.batch_size,
-            "smoothing": 0.1,
+            "smoothing": args.smoothing,
             "load_trained_model": False,
             "trained_model_checkpoint": ""
         },
@@ -73,7 +81,7 @@ if __name__ == '__main__':
             "betas": (args.beta0, args.beta1),
             "eps": 1e-9,
             "factor": 1,
-            "warmup": 2000,
+            "warmup": args.warmup,
             "step": 0,
 
         },
