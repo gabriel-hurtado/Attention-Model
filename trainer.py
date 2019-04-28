@@ -123,7 +123,8 @@ class Trainer(object):
                                  betas=params["optim"]["betas"],
                                  eps=params["optim"]["eps"],
                                  factor=params["optim"]["factor"],
-                                 warmup=params["optim"]["warmup"])
+                                 warmup=params["optim"]["warmup"],
+                                 step=params["optim"]["step"])
 
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
@@ -498,7 +499,8 @@ if __name__ == '__main__':
             "betas": (0.9, 0.98),
             "eps": 1e-9,
             "factor": 1,
-            "warmup": 2000
+            "warmup": 2000,
+            "step": 0
 
         },
 
