@@ -540,3 +540,10 @@ poster/poster.pdf
 
 
 webpages/
+Dockerfile
+train-on-google-cloud.sh
+tests/
+resources/
+poster/
+experiments/
+.git
