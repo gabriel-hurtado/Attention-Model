@@ -11,6 +11,15 @@ export IMAGE_URI=gcr.io/${PROJECT_ID}/${IMAGE_REPO_NAME}:${IMAGE_TAG}
 export REGION=us-east1
 export JOB_NAME=hp_tuning_container_job_$(date +%Y%m%d_%H%M%S)
 
-#docker build -f Dockerfile -t ${IMAGE_URI} ./
-#docker run ${IMAGE_URI} --epochs 1
-#docker push ${IMAGE_URI}
+docker build -f Dockerfile -t ${IMAGE_URI} ./
+docker run ${IMAGE_URI} --epochs 1
+docker push ${IMAGE_URI}
+
+gcloud beta ml-engine jobs submit training $JOB_NAME \                                                                 [ruby-2.3.7p456]
+  --job-dir=${JOB_DIR} \
+  --region=${REGION} \
+  --master-image-uri ${IMAGE_URI} \
+  --config=hptuning_config.yaml \
+  --scale-tier BASIC-GPU \
+  -- \
+  --batch-size 48

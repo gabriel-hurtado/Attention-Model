@@ -16,6 +16,8 @@ from training.statistics_collector import StatisticsCollector
 from transformer.model import Transformer
 from google.cloud import storage
 
+HYPERTUNER = None
+
 
 class Trainer(object):
     """
@@ -247,6 +249,13 @@ class Trainer(object):
 
             # 3.3 Export to Tensorboard
             self.validation_stat_col.export_to_tensorboard()
+
+            # 3.4 Export to Hypertune
+            if HYPERTUNER is not None:
+                HYPERTUNER.report_hyperparameter_tuning_metric(
+                    hyperparameter_metric_tag='validation_loss',
+                    metric_value=val_loss,
+                    global_step=epoch)
 
         # always save the model at end of training
         if "save_dir" in params["settings"]:

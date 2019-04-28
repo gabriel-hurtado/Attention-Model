@@ -1,9 +1,10 @@
 import argparse
+import sys
 
 import hypertune
 import torch
 
-from trainer import Trainer
+import trainer as t
 
 
 def get_args():
@@ -72,7 +73,8 @@ if __name__ == '__main__':
             "betas": (args.beta0, args.beta1),
             "eps": 1e-9,
             "factor": 1,
-            "warmup": 2000
+            "warmup": 2000,
+            "step": 0,
 
         },
 
@@ -106,15 +108,12 @@ if __name__ == '__main__':
 
         logging.error("CUDA is not available. This script is supposed to "
                       "run on a CUDA-enabled instance.")
+        sys.exit(1)
 
-    trainer = Trainer(params)
+    t.HYPERTUNER = hypertune.HyperTune()
+
+    trainer = t.Trainer(params)
     validation_loss = trainer.train()
-
-    hpt = hypertune.HyperTune()
-    hpt.report_hyperparameter_tuning_metric(
-        hyperparameter_metric_tag='validation_loss',
-        metric_value=validation_loss,
-        global_step=args.epochs)
 
     if not args.job_dir:
         print(f"Validation loss: {validation_loss}")

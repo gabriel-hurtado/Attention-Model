@@ -16,15 +16,15 @@
 trainingInput:
   hyperparameters:
     goal: MINIMIZE
-    maxTrials: 10
-    maxParallelTrials: 5
+    maxTrials: 15
+    maxParallelTrials: 7
     hyperparameterMetricTag: validation_loss
     enableTrialEarlyStopping: TRUE
     params:
     - parameterName: epochs
       type: INTEGER
-      minValue: 10
-      maxValue: 250
+      minValue: 3
+      maxValue: 15
       scaleType: UNIT_LINEAR_SCALE
     - parameterName: beta0
       type: DOUBLE
