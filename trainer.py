@@ -113,8 +113,8 @@ class Trainer(object):
             self.loss_fn = LabelSmoothingLoss(size=self.trg_vocab_size,
                                               padding_token=self.src_padding,
                                               smoothing=params["training"]["smoothing"])
-            self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(
-                params["training"]["smoothing"]))
+            self.logger.info(f"Using LabelSmoothingLoss with "
+                             f"smoothing={params['training']['smoothing']}.")
         else:
             self.loss_fn = CrossEntropyLoss(pad_token=self.src_padding)
             self.logger.info("Using CrossEntropyLoss.")
@@ -323,7 +323,7 @@ class Trainer(object):
                              'root': {'level': 'DEBUG',
                                       'handlers': ['console']}}
             if self.google_cloud_env:
-                logger_config['formatters']['simple'] = "%(name)s >>> %(message)s"
+                logger_config['formatters']['simple']['format'] = "%(name)s >>> %(message)s"
 
         logging.config.dictConfig(logger_config)
 

@@ -1,5 +1,4 @@
 import argparse
-import sys
 
 import hypertune
 import torch
@@ -114,9 +113,8 @@ if __name__ == '__main__':
     if not torch.cuda.is_available():
         import logging
 
-        logging.error("CUDA is not available. This script is supposed to "
-                      "run on a CUDA-enabled instance.")
-        sys.exit(1)
+        logging.warning("CUDA is not available. This script is supposed to "
+                        "run on a CUDA-enabled instance.")
 
     t.HYPERTUNER = hypertune.HyperTune()
 
