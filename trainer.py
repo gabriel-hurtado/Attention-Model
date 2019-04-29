@@ -98,9 +98,10 @@ class Trainer(object):
 
         if params["training"].get("load_trained_model", False):
             if self.multi_gpu:
-                self.model.module.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
+                self.model.module.load(
+                    checkpoint=params["training"]["trained_model_checkpoint"], logger=self.logger)
             else:
-                self.model.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
+                self.model.load(checkpoint=params["training"]["trained_model_checkpoint"], logger=self.logger)
 
         if torch.cuda.is_available():
             self.model = self.model.cuda()  # type: Transformer
@@ -275,7 +276,7 @@ class Trainer(object):
                 assert HYPERTUNER is not None
                 HYPERTUNER.report_hyperparameter_tuning_metric(
                     hyperparameter_metric_tag='validation_loss',
-                    metric_value=val_loss,
+                    metric_value=self.validation_stat_col['loss'],
                     global_step=epoch)
 
         # always save the model at end of training
