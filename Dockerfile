@@ -17,11 +17,13 @@ WORKDIR /root
 # Installs pandas, google-cloud-storage, and cloudml-hypertune
 RUN pip install pandas google-cloud-storage cloudml-hypertune
 
-# Copies the trainer code to the docker image.
-COPY . ./
 
 # Install requirements
+COPY requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
 
 # Set up the entry point to invoke the trainer.
 ENTRYPOINT ["python", "task.py"]
+
+# Copies the trainer code to the docker image.
+COPY . ./
