@@ -1,11 +1,12 @@
 import json
-import random
 import logging
 import logging.config
 import os
+import random
 from datetime import datetime
 
 import torch
+from google.cloud import storage
 
 from dataset.iwslt import IWSLTDatasetBuilder
 from dataset.language_pairs import LanguagePair
@@ -14,7 +15,6 @@ from training.loss import LabelSmoothingLoss, CrossEntropyLoss
 from training.optimizer import NoamOpt
 from training.statistics_collector import StatisticsCollector
 from transformer.model import Transformer
-from google.cloud import storage
 
 HYPERTUNER = None
 
@@ -80,7 +80,7 @@ class Trainer(object):
 
         self.logger.info(
             "Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
-            .format(self.src_vocab_size, self.trg_vocab_size))
+                .format(self.src_vocab_size, self.trg_vocab_size))
 
         # pass the size of input & output vocabs to model's params
         params["model"]["src_vocab_size"] = self.src_vocab_size
@@ -91,7 +91,8 @@ class Trainer(object):
 
         if params["training"].get("multi_gpu", False):
             self.model = torch.nn.DataParallel(self.model)
-            self.logger.info("Multi-GPU training activated, on devices: {}".format(self.model.device_ids))
+            self.logger.info(
+                "Multi-GPU training activated, on devices: {}".format(self.model.device_ids))
             self.multi_gpu = True
         else:
             self.multi_gpu = False
@@ -99,9 +100,11 @@ class Trainer(object):
         if params["training"].get("load_trained_model", False):
             if self.multi_gpu:
                 self.model.module.load(
-                    checkpoint=params["training"]["trained_model_checkpoint"], logger=self.logger)
+                    checkpoint=params["training"]["trained_model_checkpoint"],
+                    logger=self.logger)
             else:
-                self.model.load(checkpoint=params["training"]["trained_model_checkpoint"], logger=self.logger)
+                self.model.load(checkpoint=params["training"]["trained_model_checkpoint"],
+                                logger=self.logger)
 
         if torch.cuda.is_available():
             self.model = self.model.cuda()  # type: Transformer
@@ -145,7 +148,6 @@ class Trainer(object):
             with open(self.log_dir + 'params.json', 'w') as fp:
                 json.dump(params, fp)
             self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
-
 
         self.logger.info('Experiment setup done.')
 
@@ -294,7 +296,7 @@ class Trainer(object):
 
         return val_loss
 
-    def configure_logging(self, training_problem_name: str, logger_config = None) -> None:
+    def configure_logging(self, training_problem_name: str, logger_config=None) -> None:
         """
         Takes care of the initialization of logging-related objects:
 
@@ -562,16 +564,21 @@ if __name__ == '__main__':
     # Try to predict the following sequence:
     # first sentence in the validation dataset
     batch = next(iter(IWSLTDatasetBuilder.masked(
-                    IWSLTDatasetBuilder.transposed(trainer.validation_dataset_iterator))))
+        IWSLTDatasetBuilder.transposed(trainer.validation_dataset_iterator))))
 
     if torch.cuda.is_available():
         batch.cuda()
 
     if trainer.multi_gpu:
-        prediction = trainer.model.module.greedy_decode(batch.src[0].unsqueeze(0), batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=15)
+        prediction = trainer.model.module.greedy_decode(batch.src[0].unsqueeze(0),
+                                                        batch.src_mask[0], trainer.trg_vocab,
+                                                        start_symbol="<s>", stop_symbol="</s>",
+                                                        max_length=15)
     else:
-        prediction = trainer.model.greedy_decode(batch.src[0].unsqueeze(0), batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>",
-                                                 stop_symbol="</s>", max_length=params["dataset"]["max_seq_length"])
+        prediction = trainer.model.greedy_decode(batch.src[0].unsqueeze(0), batch.src_mask[0],
+                                                 trainer.trg_vocab, start_symbol="<s>",
+                                                 stop_symbol="</s>",
+                                                 max_length=params["dataset"]["max_seq_length"])
 
     target, target_sentence = "", batch.trg[0]
     for i in target_sentence:
