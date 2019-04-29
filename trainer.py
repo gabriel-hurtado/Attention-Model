@@ -268,7 +268,7 @@ class Trainer(object):
                     else:
                         filename = self.model.save(self.model_dir, epoch, loss.item(),
                                                    model_name=self.model_name)
-                    save_model(self.gcs_save_dir, filename)
+                    save_model(self.gcs_save_dir, filename, self.model_name)
                 else:
                     self.logger.warning("GCS save dir is None. Skipping save for this epoch.")
                 # 3.4.b Export to Hypertune
@@ -483,7 +483,8 @@ class Trainer(object):
         self.logger.info("numpy seed was set to {}".format(numpy_seed))
         self.logger.info("random seed was set to {}".format(random_seed))
 
-def save_model(job_dir, model_name):
+
+def save_model(job_dir, filepath, model_name):
     """Saves the model to Google Cloud Storage"""
     # Example: job_dir = 'gs://BUCKET_ID/hptuning_sonar/1'
     job_dir = job_dir.replace('gs://', '')  # Remove the 'gs://'
@@ -497,7 +498,8 @@ def save_model(job_dir, model_name):
     blob = bucket.blob('{}/{}'.format(
         bucket_path,
         model_name))
-    blob.upload_from_filename(model_name)
+    blob.upload_from_filename(filepath)
+
 
 if __name__ == '__main__':
     params = {
