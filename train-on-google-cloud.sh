@@ -12,7 +12,7 @@ export REGION=us-east1
 export JOB_NAME=hp_tuning_container_job_$(date +%Y%m%d_%H%M%S)
 
 docker build -f Dockerfile -t ${IMAGE_URI} ./
-# docker run ${IMAGE_URI} --epochs 1
+docker run ${IMAGE_URI} --epochs 1 --is-test
 docker push ${IMAGE_URI}
 
 gcloud beta ml-engine jobs submit training $JOB_NAME \
