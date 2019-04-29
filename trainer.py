@@ -276,7 +276,7 @@ class Trainer(object):
                 assert HYPERTUNER is not None
                 HYPERTUNER.report_hyperparameter_tuning_metric(
                     hyperparameter_metric_tag='validation_loss',
-                    metric_value=self.validation_stat_col['loss'],
+                    metric_value=val_loss / (i + 1),
                     global_step=epoch)
 
         # always save the model at end of training
