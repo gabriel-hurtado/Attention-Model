@@ -537,4 +537,15 @@ TSWLatexianTemp*
 
 # End of https://www.gitignore.io/api/latex
 poster/poster.pdf
-tests/resources
+
+
+webpages/
+Dockerfile
+train-on-google-cloud.sh
+tests/
+resources/
+poster/
+experiments/
+.git
+*.yml
+google_cloud_jobs/

@@ -1,11 +1,13 @@
 import json
-import random
 import logging
 import logging.config
 import os
+import random
 from datetime import datetime
+from os.path import join
 
 import torch
+from google.cloud import storage
 
 from dataset.iwslt import IWSLTDatasetBuilder
 from dataset.language_pairs import LanguagePair
@@ -15,6 +17,8 @@ from training.optimizer import NoamOpt
 from training.statistics_collector import StatisticsCollector
 from transformer.model import Transformer
 
+HYPERTUNER = None
+
 
 class Trainer(object):
     """
@@ -22,7 +26,7 @@ class Trainer(object):
 
     """
 
-    def __init__(self, params):
+    def __init__(self, params: dict):
         """
         Constructor of the Trainer.
         Sets up the following:
@@ -30,6 +34,9 @@ class Trainer(object):
             - Initialize the model, dataset, loss, optimizer
             - log statistics (epoch, elapsed time, BLEU score etc.)
         """
+        self.is_hyperparameter_tuning = HYPERTUNER is not None
+        self.gcs_job_dir = params["settings"].get("save_dir", None)
+        self.model_name = params["settings"].get("model_name", None)
 
         # configure all logging
         self.configure_logging(training_problem_name="IWSLT")
@@ -41,7 +48,17 @@ class Trainer(object):
 
         # Initialize TensorBoard and statistics collection.
         self.initialize_statistics_collection()
-        self.initialize_tensorboard()
+
+        if self.is_hyperparameter_tuning:
+            assert "save_dir" in params["settings"] and "model_name" in params["settings"], \
+                "Expected parameters 'save_dir' and 'model_name'."
+        else:
+            # save the configuration as a json file in the experiments dir
+            with open(self.log_dir + 'params.json', 'w') as fp:
+                json.dump(params, fp)
+            self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
+
+        self.initialize_tensorboard(log_dir=self.gcs_job_dir)
 
         # initialize training Dataset class
         self.logger.info("Creating the training & validation dataset, may take some time...")
@@ -76,30 +93,34 @@ class Trainer(object):
 
         self.logger.info(
             "Created a training & a validation dataset, with src_vocab_size={} and trg_vocab_size={}"
-            .format(self.src_vocab_size, self.trg_vocab_size))
+                .format(self.src_vocab_size, self.trg_vocab_size))
 
         # pass the size of input & output vocabs to model's params
         params["model"]["src_vocab_size"] = self.src_vocab_size
         params["model"]["tgt_vocab_size"] = self.trg_vocab_size
 
         # can now instantiate model
-        self.model = Transformer(params["model"])
+        self.model = Transformer(params["model"])  # type: Transformer
 
         if params["training"].get("multi_gpu", False):
             self.model = torch.nn.DataParallel(self.model)
-            self.logger.info("Multi-GPU training activated, on devices: {}".format(self.model.device_ids))
+            self.logger.info(
+                "Multi-GPU training activated, on devices: {}".format(self.model.device_ids))
             self.multi_gpu = True
         else:
             self.multi_gpu = False
 
         if params["training"].get("load_trained_model", False):
             if self.multi_gpu:
-                self.model.module.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
+                self.model.module.load(
+                    checkpoint=params["training"]["trained_model_checkpoint"],
+                    logger=self.logger)
             else:
-                self.model.load(checkpoint_file=params["training"]["trained_model_checkpoint"], logger=self.logger)
+                self.model.load(checkpoint=params["training"]["trained_model_checkpoint"],
+                                logger=self.logger)
 
         if torch.cuda.is_available():
-            self.model = self.model.cuda()
+            self.model = self.model.cuda()  # type: Transformer
 
         # whether to save the model at every epoch or not
         self.save_intermediate = params["training"].get("save_intermediate", False)
@@ -109,8 +130,8 @@ class Trainer(object):
             self.loss_fn = LabelSmoothingLoss(size=self.trg_vocab_size,
                                               padding_token=self.src_padding,
                                               smoothing=params["training"]["smoothing"])
-            self.logger.info("Using LabelSmoothingLoss with smoothing={}.".format(
-                params["training"]["smoothing"]))
+            self.logger.info(f"Using LabelSmoothingLoss with "
+                             f"smoothing={params['training']['smoothing']}.")
         else:
             self.loss_fn = CrossEntropyLoss(pad_token=self.src_padding)
             self.logger.info("Using CrossEntropyLoss.")
@@ -128,12 +149,6 @@ class Trainer(object):
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
 
-        # save the configuration as a json file in the experiments dir
-        with open(self.log_dir + 'params.json', 'w') as fp:
-            json.dump(params, fp)
-
-        self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
-
         self.logger.info('Experiment setup done.')
 
     def train(self):
@@ -146,6 +161,7 @@ class Trainer(object):
         """
         # Reset the counter.
         episode = -1
+        val_loss = 0.
 
         for epoch in range(self.epochs):
 
@@ -211,7 +227,7 @@ class Trainer(object):
 
             # validate the model on the validation set
             self.model.eval()
-            val_loss = 0
+            val_loss = 0.
 
             with torch.no_grad():
                 for i, batch in enumerate(
@@ -246,6 +262,24 @@ class Trainer(object):
             # 3.3 Export to Tensorboard
             self.validation_stat_col.export_to_tensorboard()
 
+            # 3.4 Save model on GCloud
+            if self.gcs_job_dir is not None:
+                if self.multi_gpu:
+                    filename = self.model.module.save(self.model_dir, epoch, loss.item(),
+                                                      model_name=self.model_name)
+                else:
+                    filename = self.model.save(self.model_dir, epoch, loss.item(),
+                                               model_name=self.model_name)
+                save_model(self.gcs_job_dir, filename, self.model_name)
+
+            # 3.4.b Export to Hypertune
+            if self.is_hyperparameter_tuning:
+                assert HYPERTUNER is not None
+                HYPERTUNER.report_hyperparameter_tuning_metric(
+                    hyperparameter_metric_tag='validation_loss',
+                    metric_value=val_loss / (i + 1),
+                    global_step=epoch)
+
         # always save the model at end of training
         if self.multi_gpu:
             self.model.module.save(self.model_dir, epoch, loss.item())
@@ -258,7 +292,9 @@ class Trainer(object):
         self.finalize_statistics_collection()
         self.finalize_tensorboard()
 
-    def configure_logging(self, training_problem_name: str) -> None:
+        return val_loss
+
+    def configure_logging(self, training_problem_name: str, logger_config=None) -> None:
         """
         Takes care of the initialization of logging-related objects:
 
@@ -272,20 +308,25 @@ class Trainer(object):
         """
         # instantiate logger
         # Load the default logger configuration.
-        logger_config = {'version': 1,
-                         'disable_existing_loggers': False,
-                         'formatters': {
-                             'simple': {
-                                 'format': '[%(asctime)s] - %(levelname)s - %(name)s >>> %(message)s',
-                                 'datefmt': '%Y-%m-%d %H:%M:%S'}},
-                         'handlers': {
-                             'console': {
-                                 'class': 'logging.StreamHandler',
-                                 'level': 'INFO',
-                                 'formatter': 'simple',
-                                 'stream': 'ext://sys.stdout'}},
-                         'root': {'level': 'DEBUG',
-                                  'handlers': ['console']}}
+        if logger_config is None:
+            logger_config = {'version': 1,
+                             'disable_existing_loggers': False,
+                             'formatters': {
+                                 'simple': {
+                                     'format': '[%(asctime)s] - %(levelname)s - %(name)s >>> %(message)s',
+                                     'datefmt': '%Y-%m-%d %H:%M:%S'}},
+                             'handlers': {
+                                 'console': {
+                                     'class': 'logging.StreamHandler',
+                                     'level': 'INFO',
+                                     'formatter': 'simple',
+                                     'stream': 'ext://sys.stdout'}},
+                             'root': {'level': 'DEBUG',
+                                      'handlers': ['console']}}
+            if self.is_hyperparameter_tuning or self.gcs_job_dir is not None:
+                # Running on GCloud, use shorter messages as time and debug level will be
+                # saved elsewhere.
+                logger_config['formatters']['simple']['format'] = "%(name)s >>> %(message)s"
 
         logging.config.dictConfig(logger_config)
 
@@ -382,16 +423,19 @@ class Trainer(object):
         self.training_batch_stats_file.close()
         self.validation_batch_stats_file.close()
 
-    def initialize_tensorboard(self) -> None:
+    def initialize_tensorboard(self, log_dir = None) -> None:
         """
         Initializes the TensorBoard writers, and log directories.
         """
         from tensorboardX import SummaryWriter
 
-        self.training_writer = SummaryWriter(self.log_dir + '/training')
+        if log_dir is None:
+            log_dir = self.log_dir
+
+        self.training_writer = SummaryWriter(join(log_dir, "tensorboard", 'training'))
         self.training_stat_col.initialize_tensorboard(self.training_writer)
 
-        self.validation_writer = SummaryWriter(self.log_dir + '/validation')
+        self.validation_writer = SummaryWriter(join(log_dir, "tensorboard", 'validation'))
         self.validation_stat_col.initialize_tensorboard(self.validation_writer)
 
     def finalize_tensorboard(self) -> None:
@@ -444,6 +488,23 @@ class Trainer(object):
         self.logger.info("torch seed was set to {}".format(pytorch_seed))
         self.logger.info("numpy seed was set to {}".format(numpy_seed))
         self.logger.info("random seed was set to {}".format(random_seed))
+
+
+def save_model(job_dir, filepath, model_name):
+    """Saves the model to Google Cloud Storage"""
+    # Example: job_dir = 'gs://BUCKET_ID/hptuning_sonar/1'
+    job_dir = job_dir.replace('gs://', '')  # Remove the 'gs://'
+    # Get the Bucket Id
+    bucket_id = job_dir.split('/')[0]
+    # Get the path. Example: 'hptuning_sonar/1'
+    bucket_path = job_dir.lstrip('{}/'.format(bucket_id))
+
+    # Upload the model to GCS
+    bucket = storage.Client().bucket(bucket_id)
+    blob = bucket.blob('{}/{}'.format(
+        bucket_path,
+        model_name))
+    blob.upload_from_filename(filepath)
 
 
 if __name__ == '__main__':
@@ -506,16 +567,21 @@ if __name__ == '__main__':
     # Try to predict the following sequence:
     # first sentence in the validation dataset
     batch = next(iter(IWSLTDatasetBuilder.masked(
-                    IWSLTDatasetBuilder.transposed(trainer.validation_dataset_iterator))))
+        IWSLTDatasetBuilder.transposed(trainer.validation_dataset_iterator))))
 
     if torch.cuda.is_available():
         batch.cuda()
 
     if trainer.multi_gpu:
-        prediction = trainer.model.module.greedy_decode(batch.src[0].unsqueeze(0), batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>", stop_symbol="</s>", max_length=15)
+        prediction = trainer.model.module.greedy_decode(batch.src[0].unsqueeze(0),
+                                                        batch.src_mask[0], trainer.trg_vocab,
+                                                        start_symbol="<s>", stop_symbol="</s>",
+                                                        max_length=15)
     else:
-        prediction = trainer.model.greedy_decode(batch.src[0].unsqueeze(0), batch.src_mask[0], trainer.trg_vocab, start_symbol="<s>",
-                                                 stop_symbol="</s>", max_length=params["dataset"]["max_seq_length"])
+        prediction = trainer.model.greedy_decode(batch.src[0].unsqueeze(0), batch.src_mask[0],
+                                                 trainer.trg_vocab, start_symbol="<s>",
+                                                 stop_symbol="</s>",
+                                                 max_length=params["dataset"]["max_seq_length"])
 
     target, target_sentence = "", batch.trg[0]
     for i in target_sentence:

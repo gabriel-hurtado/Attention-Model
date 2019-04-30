@@ -35,3 +35,19 @@ class TestIWSLT(TestCase):
         self.assertIsNone(dataset_iterator)
         self.assertIsNone(val_iterator)
         self.assertIsNotNone(test_iterator)
+
+    @skipIf(len(getenv("CI", "")) > 0, "skipping slow tests on CI")
+    def test_build_validation_batches(self):
+        batch_size = 96
+        language_pair = LanguagePair.fr_en
+
+        dataset_iterator, val_iterator, test_iterator, _, _ = (
+            IWSLTDatasetBuilder.build(language_pair=language_pair,
+                                      split=Split.Validation,
+                                      max_length=40, batch_size_train=batch_size)
+        )
+        self.assertIsNone(dataset_iterator)
+        self.assertIsNone(test_iterator)
+        self.assertIsNotNone(val_iterator)
+        print(len(list(val_iterator)))
+        pass
