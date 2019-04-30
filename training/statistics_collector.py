@@ -1,5 +1,7 @@
-from io import TextIOBase
 from collections import Mapping
+from os.path import join
+from typing import TextIO
+
 from tensorboardX import SummaryWriter
 
 class StatisticsCollector(Mapping):
@@ -87,7 +89,7 @@ class StatisticsCollector(Mapping):
         for key in self.statistics.keys():
             del self.statistics[key][:]
 
-    def initialize_csv_file(self, log_dir: str, filename: str) -> TextIOBase:
+    def initialize_csv_file(self, log_dir: str, filename: str) -> TextIO:
         """
         Creates a new ``csv`` file and initializes it with a header produced on the base of statistics names.
 
@@ -109,7 +111,7 @@ class StatisticsCollector(Mapping):
         header_str = header_str[:-1] + '\n'
 
         # Open file for writing.
-        self.csv_file = open(log_dir + filename, 'w', 1)
+        self.csv_file = open(join(log_dir, filename), 'w', 1)
         self.csv_file.write(header_str)
 
         return self.csv_file
@@ -208,8 +210,9 @@ class StatisticsCollector(Mapping):
 
         # If it is still None - raise error
         if tb_writer is None:
-            raise NotImplementedError('Not Tensorboard writer found. Please pass one with tb_writer or '
-                                      'instantiate one with initialize_tensorboard(self, tb_writer: SummaryWriter).')
+            raise NotImplementedError('No Tensorboard writer found. Please pass one with '
+                                      'tb_writer or instantiate one with '
+                                      'initialize_tensorboard(self, tb_writer: SummaryWriter).')
 
         # Iterate through keys and values and concatenate them.
         for key, value in self.statistics.items():

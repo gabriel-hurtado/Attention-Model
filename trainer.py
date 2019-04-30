@@ -339,22 +339,22 @@ class Trainer(object):
 
         # Prepare the output path for logging
         time_str = '{0:%Y%m%d_%H%M%S}'.format(datetime.now())
-        self.log_dir = 'experiments/' + training_problem_name + '/' + time_str + '/'
+        self.log_dir = join('experiments', training_problem_name, time_str)
 
         os.makedirs(self.log_dir, exist_ok=False)
         self.logger.info('Folder {} created.'.format(self.log_dir))
 
         # Set log dir and add the handler for the logfile to the logger.
-        self.log_file = self.log_dir + 'training.log'
+        self.log_file = join(self.log_dir, 'training.log')
         self.add_file_handler_to_logger(self.log_file)
 
         self.logger.info('Log File {} created.'.format(self.log_file))
 
         # Models dir: to store the trained models.
-        self.model_dir = self.log_dir + 'models/'
+        self.model_dir = join(self.log_dir, 'models')
         os.makedirs(self.model_dir, exist_ok=False)
 
-        self.logger.info('Model folder {} created.'.format(self.model_dir))
+        self.logger.info(f"Model folder '{self.model_dir}' created.")
 
     def add_file_handler_to_logger(self, logfile: str) -> None:
         """
@@ -427,7 +427,7 @@ class Trainer(object):
         self.training_batch_stats_file.close()
         self.validation_batch_stats_file.close()
 
-    def initialize_tensorboard(self, log_dir = None) -> None:
+    def initialize_tensorboard(self, log_dir=None) -> None:
         """
         Initializes the TensorBoard writers, and log directories.
         """
@@ -494,20 +494,16 @@ class Trainer(object):
         self.logger.info("random seed was set to {}".format(random_seed))
 
 
-def save_model(job_dir, filepath, model_name):
+def save_model(job_dir: str, filepath, model_name):
     """Saves the model to Google Cloud Storage"""
     # Example: job_dir = 'gs://BUCKET_ID/hptuning_sonar/1'
     job_dir = job_dir.replace('gs://', '')  # Remove the 'gs://'
-    # Get the Bucket Id
-    bucket_id = job_dir.split('/')[0]
-    # Get the path. Example: 'hptuning_sonar/1'
-    bucket_path = job_dir.lstrip('{}/'.format(bucket_id))
+    # Get the Bucket Id and path
+    bucket_id, bucket_path = job_dir.split('/', maxsplit=1)
 
     # Upload the model to GCS
     bucket = storage.Client().bucket(bucket_id)
-    blob = bucket.blob('{}/{}'.format(
-        bucket_path,
-        model_name))
+    blob = bucket.blob(join(bucket_path, model_name))
     blob.upload_from_filename(filepath)
 
 
