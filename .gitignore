@@ -258,7 +258,7 @@ $RECYCLE.BIN/
 .idea/misc.xml
 
 # Notebook Export
-webpages/*/*.html
+webpages/progress_checkin/*.html
 
 # Dataset local cache
 resources/torchtext
@@ -534,3 +534,4 @@ TSWLatexianTemp*
 
 # End of https://www.gitignore.io/api/latex
 tests/resources
+webpages/project_webpage/.idea
