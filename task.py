@@ -15,13 +15,12 @@ def get_args():
     """
     parser = argparse.ArgumentParser(description='PyTorch Trainer')
     parser.add_argument('--job-dir',  # handled automatically by AI Platform
-                        help='GCS location to write checkpoints and export ' \
-                             'models')
+                        help='GCS location to write checkpoints and export models')
     parser.add_argument('--is-test', default=False, action='store_true')
     parser.add_argument('--is-hyperparameter-tuning', default=False, action='store_true')
     parser.add_argument('--model-name',
                         type=str,
-                        default="hptuning_model",
+                        default="model.pt",
                         help='What to name the saved model file')
     parser.add_argument('--batch-size',
                         type=int,
