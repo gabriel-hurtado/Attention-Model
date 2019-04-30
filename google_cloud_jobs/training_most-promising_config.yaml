@@ -1,0 +1,16 @@
+trainingInput:
+  scaleTier: CUSTOM
+  masterType: standard_p100
+  args:
+    - "--batch-size"
+    - "160"
+    - "--epochs"
+    - "15"
+    - "--smoothing"
+    - "0.241"
+    - "--warmup"
+    - "9505"
+    - "--beta0"
+    - "0.916"
+    - "--beta1"
+    - "0.907"

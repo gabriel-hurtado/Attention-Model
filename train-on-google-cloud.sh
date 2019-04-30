@@ -38,6 +38,7 @@ while [[ -z ${config_file} ]]; do
 done
 config_suffix=$(basename ${config_file})
 config_suffix=${config_suffix%"$CONFIG_PREFIX"}
+config_suffix=${config_suffix/_//}
 JOB_DIR=gs://${BUCKET_ID}/${config_suffix}/${DATE_ID}
 JOB_NAME=${config_suffix}_job_${DATE_ID}
 
@@ -49,3 +50,7 @@ gcloud beta ai-platform jobs submit training $JOB_NAME \
   --region=${REGION} \
   --master-image-uri ${IMAGE_URI} \
   --config="${config_file}"
+
+echo
+echo "Tensorboard can be used to watch training:"
+echo "tensorboard --logdir=${JOB_DIR}/tensorboard"

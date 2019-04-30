@@ -1,10 +1,9 @@
-# training_config.yaml
 trainingInput:
   scaleTier: CUSTOM
   masterType: standard_p100
   args:
     - "--batch-size"
-    - "128"
+    - "160"
     - "--epochs"
     - "15"
     - "--smoothing"
