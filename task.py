@@ -49,7 +49,15 @@ def get_args():
     parser.add_argument('--seed',
                         type=int,
                         default=0,
-                        help='random seed (default: 0)')
+                        help='Random seed (default: 0)')
+    parser.add_argument('--d-model',
+                        type=int,
+                        default=512,
+                        help='Model dimension (default: 512)')
+    parser.add_argument('--ff-dropout',
+                        type=float,
+                        default=0.1,
+                        help='Feed-forward dropout (default: 0.1)')
     args = parser.parse_args()
 
     return args
@@ -98,7 +106,7 @@ if __name__ == '__main__':
         },
 
         "model": {
-            'd_model': 512,
+            'd_model': args.d_model,
             'N': 6,
             'dropout': 0.1,
 
@@ -110,7 +118,7 @@ if __name__ == '__main__':
 
             'feed-forward': {
                 'd_ff': 2048,
-                'dropout': 0.1}
+                'dropout': args.ff_dropout}
         }
     }
     if not torch.cuda.is_available():
