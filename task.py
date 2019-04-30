@@ -1,4 +1,5 @@
 import argparse
+import logging
 import sys
 
 import hypertune
@@ -16,7 +17,8 @@ def get_args():
     parser.add_argument('--job-dir',  # handled automatically by AI Platform
                         help='GCS location to write checkpoints and export ' \
                              'models')
-    parser.add_argument('--is-test', action='store_true')
+    parser.add_argument('--is-test', default=False, action='store_true')
+    parser.add_argument('--is-hyperparameter-tuning', default=False, action='store_true')
     parser.add_argument('--model-name',
                         type=str,
                         default="hptuning_model",
@@ -113,8 +115,6 @@ if __name__ == '__main__':
         }
     }
     if not torch.cuda.is_available():
-        import logging
-
         logging.warning("CUDA is not available. This script is supposed to "
                         "run on a CUDA-enabled instance.")
         if args.is_test:
@@ -122,7 +122,11 @@ if __name__ == '__main__':
         else:
             sys.exit(1)
 
-    t.HYPERTUNER = hypertune.HyperTune()
+    if args.is_hyperparameter_tuning:
+        logging.info("Hyper Parameter Tuning Mode")
+        t.HYPERTUNER = hypertune.HyperTune()
+    else:
+        logging.info("Training Mode")
 
     trainer = t.Trainer(params)
     validation_loss = trainer.train()

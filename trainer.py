@@ -4,6 +4,7 @@ import logging.config
 import os
 import random
 from datetime import datetime
+from os.path import join
 
 import torch
 from google.cloud import storage
@@ -25,7 +26,7 @@ class Trainer(object):
 
     """
 
-    def __init__(self, params):
+    def __init__(self, params: dict):
         """
         Constructor of the Trainer.
         Sets up the following:
@@ -33,7 +34,9 @@ class Trainer(object):
             - Initialize the model, dataset, loss, optimizer
             - log statistics (epoch, elapsed time, BLEU score etc.)
         """
-        self.google_cloud_env = HYPERTUNER is not None
+        self.is_hyperparameter_tuning = HYPERTUNER is not None
+        self.gcs_job_dir = params["settings"].get("save_dir", None)
+        self.model_name = params["settings"].get("model_name", None)
 
         # configure all logging
         self.configure_logging(training_problem_name="IWSLT")
@@ -45,7 +48,17 @@ class Trainer(object):
 
         # Initialize TensorBoard and statistics collection.
         self.initialize_statistics_collection()
-        self.initialize_tensorboard()
+
+        if self.is_hyperparameter_tuning:
+            assert "save_dir" in params["settings"] and "model_name" in params["settings"], \
+                "Expected parameters 'save_dir' and 'model_name'."
+        else:
+            # save the configuration as a json file in the experiments dir
+            with open(self.log_dir + 'params.json', 'w') as fp:
+                json.dump(params, fp)
+            self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
+
+        self.initialize_tensorboard(log_dir=self.gcs_job_dir)
 
         # initialize training Dataset class
         self.logger.info("Creating the training & validation dataset, may take some time...")
@@ -135,19 +148,6 @@ class Trainer(object):
 
         # get number of epochs and related hyper parameters
         self.epochs = params["training"]["epochs"]
-
-        if self.google_cloud_env:
-            assert "save_dir" in params["settings"] and "model_name" in params["settings"], \
-                "Expected parameters 'save_dir' and 'model_name'."
-            self.gcs_save_dir = params["settings"]["save_dir"]
-            self.model_name = params["settings"]["model_name"]
-        else:
-            self.gcs_save_dir = None
-            self.model_name = None
-            # save the configuration as a json file in the experiments dir
-            with open(self.log_dir + 'params.json', 'w') as fp:
-                json.dump(params, fp)
-            self.logger.info('Configuration saved to {}.'.format(self.log_dir + 'params.json'))
 
         self.logger.info('Experiment setup done.')
 
@@ -263,18 +263,17 @@ class Trainer(object):
             self.validation_stat_col.export_to_tensorboard()
 
             # 3.4 Save model on GCloud
-            if self.google_cloud_env:
-                if self.gcs_save_dir is not None:
-                    if self.multi_gpu:
-                        filename = self.model.module.save(self.model_dir, epoch, loss.item(),
-                                                          model_name=self.model_name)
-                    else:
-                        filename = self.model.save(self.model_dir, epoch, loss.item(),
-                                                   model_name=self.model_name)
-                    save_model(self.gcs_save_dir, filename, self.model_name)
+            if self.gcs_job_dir is not None:
+                if self.multi_gpu:
+                    filename = self.model.module.save(self.model_dir, epoch, loss.item(),
+                                                      model_name=self.model_name)
                 else:
-                    self.logger.warning("GCS save dir is None. Skipping save for this epoch.")
-                # 3.4.b Export to Hypertune
+                    filename = self.model.save(self.model_dir, epoch, loss.item(),
+                                               model_name=self.model_name)
+                save_model(self.gcs_job_dir, filename, self.model_name)
+
+            # 3.4.b Export to Hypertune
+            if self.is_hyperparameter_tuning:
                 assert HYPERTUNER is not None
                 HYPERTUNER.report_hyperparameter_tuning_metric(
                     hyperparameter_metric_tag='validation_loss',
@@ -282,11 +281,10 @@ class Trainer(object):
                     global_step=epoch)
 
         # always save the model at end of training
-        if not self.google_cloud_env:
-            if self.multi_gpu:
-                self.model.module.save(self.model_dir, epoch, loss.item())
-            else:
-                self.model.save(self.model_dir, epoch, loss.item())
+        if self.multi_gpu:
+            self.model.module.save(self.model_dir, epoch, loss.item())
+        else:
+            self.model.save(self.model_dir, epoch, loss.item())
 
         self.logger.info("Final model exported to checkpoint.")
 
@@ -325,7 +323,9 @@ class Trainer(object):
                                      'stream': 'ext://sys.stdout'}},
                              'root': {'level': 'DEBUG',
                                       'handlers': ['console']}}
-            if self.google_cloud_env:
+            if self.is_hyperparameter_tuning or self.gcs_job_dir is not None:
+                # Running on GCloud, use shorter messages as time and debug level will be
+                # saved elsewhere.
                 logger_config['formatters']['simple']['format'] = "%(name)s >>> %(message)s"
 
         logging.config.dictConfig(logger_config)
@@ -423,16 +423,19 @@ class Trainer(object):
         self.training_batch_stats_file.close()
         self.validation_batch_stats_file.close()
 
-    def initialize_tensorboard(self) -> None:
+    def initialize_tensorboard(self, log_dir = None) -> None:
         """
         Initializes the TensorBoard writers, and log directories.
         """
         from tensorboardX import SummaryWriter
 
-        self.training_writer = SummaryWriter(self.log_dir + '/training')
+        if log_dir is None:
+            log_dir = self.log_dir
+
+        self.training_writer = SummaryWriter(join(log_dir, "tensorboard", 'training'))
         self.training_stat_col.initialize_tensorboard(self.training_writer)
 
-        self.validation_writer = SummaryWriter(self.log_dir + '/validation')
+        self.validation_writer = SummaryWriter(join(log_dir, "tensorboard", 'validation'))
         self.validation_stat_col.initialize_tensorboard(self.validation_writer)
 
     def finalize_tensorboard(self) -> None:

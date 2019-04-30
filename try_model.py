@@ -21,7 +21,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     batch_size = 1024
-    smoothing = 0.241
+    smoothing = 0.
     print("Loading dataset...")
     _, val_iterator, _, src_vocab, trg_vocab = (
         IWSLTDatasetBuilder.build(language_pair=LanguagePair.fr_en,

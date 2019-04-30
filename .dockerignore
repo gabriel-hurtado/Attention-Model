@@ -547,3 +547,5 @@ resources/
 poster/
 experiments/
 .git
+*.yml
+google_cloud_jobs/

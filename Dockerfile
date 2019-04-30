@@ -25,5 +25,8 @@ RUN pip install -r requirements.txt
 # Set up the entry point to invoke the trainer.
 ENTRYPOINT ["python", "task.py"]
 
+# Install TensorboardX with Google Cloud Storage support
+RUN pip install tensorflow "git+https://github.com/CatalinVoss/tensorboardX.git@patch-1"
+
 # Copies the trainer code to the docker image.
 COPY . ./

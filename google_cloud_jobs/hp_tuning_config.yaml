@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# hptuning_config.yaml
+# hp_tuning_config.yaml
 trainingInput:
+  scaleTier: BASIC-GPU
+  args:
+    - "--batch-size"
+    - "96"
+    - "--is-hyperparameter-tuning"
   hyperparameters:
     goal: MINIMIZE
     maxTrials: 30
@@ -31,11 +36,6 @@ trainingInput:
       minValue: 2000
       maxValue: 10000
       scaleType: UNIT_LINEAR_SCALE
-    - parameterName: smoothing
-      type: DOUBLE
-      minValue: 0.05
-      maxValue: 0.25
-      scaleType: UNIT_LINEAR_SCALE
     - parameterName: beta0
       type: DOUBLE
       minValue: 0.87
@@ -43,6 +43,6 @@ trainingInput:
       scaleType: UNIT_LINEAR_SCALE
     - parameterName: beta1
       type: DOUBLE
-      minValue: 0.9
+      minValue: 0.95
       maxValue: 0.99
       scaleType: UNIT_LINEAR_SCALE
