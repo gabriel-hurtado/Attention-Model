@@ -1,6 +1,10 @@
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
 image: python:latest
+stages:
+  - test
+  - package
+  - deploy
 
 before_script:
   - python -V # Print out python version for debugging
@@ -52,8 +56,8 @@ style check:
       - "**/*.py"
       - "*.py"
 
-.checkin deliverables: # Disabled since this is not needed anymore
-  stage: deploy
+checkin deliverables: # This is not needed anymore
+  stage: package
   variables:
     GIT_LFS_SKIP_SMUDGE: "1"
   before_script:
@@ -66,19 +70,20 @@ style check:
     name: "check-in_gradescope_upload"
     paths:
       - progress_checkin
+    expire_in: 10 mins
   only:
     - master
 
 final deliverables:
-  stage: deploy
+  stage: package
   variables:
     GIT_LFS_SKIP_SMUDGE: "1"
   before_script:
     - pip install nbconvert
   script:
     - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
-    - mkdir -p project_webpage/project_webpage
-    - mv webpages/project_webpage/index.html project_webpage/project_webpage/index.html
+    - mkdir -p project_webpage
+    - mv webpages/project_webpage/index.html project_webpage/index.html
   artifacts:
     name: "gradescope_upload"
     paths:
@@ -87,21 +92,19 @@ final deliverables:
     - master
 
 pages:
+  image: alpine:latest
   stage: deploy
-  before_script:
-    - pip install nbconvert
-  variables:
-    GIT_LFS_SKIP_SMUDGE: "1"
   script:
-    - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb  --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
-    - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --template full --output index
-    - mkdir public
-    - mv webpages/project_webpage/index.html public/index.html
-    - mv webpages/progress_checkin/index.html public/progress.html
+    - mv project_webpage public
+    - mv progress_checkin/index.html public/progress.html
     - cp install.sh public/install.sh
+    - cp poster.pdf public/poster.pdf
   artifacts:
     paths:
       - public
     expire_in: 20 mins
   only:
     - master
+  dependencies:
+    - final deliverables
+    - checkin deliverables

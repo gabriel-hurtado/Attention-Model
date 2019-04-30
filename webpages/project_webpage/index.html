@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>Deep Learning Class Project
+        | Georgia Tech | Fall 2018: CS 4803 / 7643</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+        }
+
+        .vis {
+            color: #3366CC;
+        }
+
+        .data {
+            color: #FF9900;
+        }
+    </style>
+
+    <link href="css/bootstrap-responsive.min.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="container">
+    <div class="page-header">
+
+        <!-- Title and Name -->
+        <h1>Learning about the Attention Mechanism and the Transformer Model</h1>
+        <span style="font-size: 20px; line-height: 1.5em;"><strong>Baptiste Amato, Alexis Durocher, Gabriel Hurtado, Alexandre Jouandin, Vincent Marois</strong></span><br>
+        <span style="font-size: 18px; line-height: 1.5em;">Spring 2019 CS 4803 / 7643 Deep Learning: Class Project</span><br>
+        <span style="font-size: 18px; line-height: 1.5em;">Georgia Tech</span>
+        <hr>
+
+        <!-- Goal -->
+        <h2>Abstract</h2>
+
+        One or two sentences on the motivation behind the problem you are solving. One or two sentences describing the
+        approach you took. One or two sentences on the main result you obtained.
+        <br><br>
+        <!-- figure -->
+        <h2>Teaser figure</h2>
+        Here is an image of the `Transformer` architecture, drawn from <a
+            href="https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html">here</a>.)
+        <br><br>
+        <!-- Main Illustrative Figure -->
+        <div style="text-align: center;">
+            <img style="height: 500px;"
+                 alt='The Transformer architecture and a zoom on the attention mechanism'
+                 src='resources/transformer.png'/></p>
+        </div>
+
+        <br><br>
+        <!-- Introduction -->
+        <h2>Introduction / Background / Motivation</h2>
+        <h4>What did you try to do? What problem did you try to solve? Articulate your objectives using absolutely no
+            jargon.</h4>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore
+        magna aliqua.
+
+        <h4>How is it done today, and what are the limits of current practice?</h4>
+        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+        <h4>Who cares? If you are successful, what difference will it make?</h4>
+        Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+        <br><br>
+        <!-- Approach -->
+        <h2>Approach</h2>
+        <h4>What did you do exactly? How did you solve the problem? Why did you think it would be successful? Is
+            anything new in your approach?</h4>
+        Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+        <h4>What problems did you anticipate? What problems did you encounter? Did the very first thing you tried
+            work?</h4>
+        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem
+        aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+
+        <br><br>
+        <!-- Results -->
+        <h2>Experiments and Results</h2>
+        <h4>How did you measure success? What datasets did you use and what experiments did you carry out? What were the
+            results, both quantitative and qualitative? Did you succeed? Did you fail? Why?</h4>
+        Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores
+        eos qui ratione voluptatem sequi nesciunt.
+
+        <br><br>
+
+        <!-- Main Results Figure -->
+        <div style="text-align: center;">
+            <img style="height: 300px;"
+                 src="resources/loss.svg"
+                 alt="Comparison of two models training validation evolution."/>
+        </div>
+        <br><br>
+
+        <hr>
+        <footer>
+            <p>© Baptiste Amato, Alexis Durocher, Gabriel Hurtado, Alexandre Jouandin, Vincent Marois</p>
+        </footer>
+
+        <br><br>
+        <!-- Analysis -->
+        <h2>Analysis</h2>
+        <h4>Do the results make sense? Why or why not? Describe what kind of visualization/analysis you performed in
+            order to verify that your results 1) are correct and 2) explain differences in performance from what was
+            expected (e.g. what appeared in papers). Provide specific claims about why you think your model is or is not
+            doing better, and justify those with qualitative and quantitative experiments (not necessarily just final
+            accuracy numbers, but statistics or other data about what the model is doing).</h4>
+        Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores
+        eos qui ratione voluptatem sequi nesciunt.
+
+
+        <br><br>
+        <!-- Team -->
+        <h2>Team Member Identification</h2>
+        <h4>Provide a list of team members and what each member did in a table. When an algorithm was implemented,
+            provide specifics as to which parts your team member implemented and which parts were leveraging open-source
+            code. <b>Your project should include doing something beyond just downloading open-source code and tuning
+                hyper-parameters</b>. This can include implementation of additional approaches (if leveraging
+            open-source code), theoretical analysis, or a thorough investigation of some phenomena. When using external
+            resources, provide references to anything you used in the README!</h4>
+
+
+        <table style="width:100%">
+            <tr>
+                <th>Name</th>
+                <th>Description of Work</th>
+            </tr>
+            <tr>
+                <td>Team member 1</td>
+                <td>Implemented new loss function, trained and monitored the optimization addressing any issues such as
+                    overfitting, tuned hyper-parameters for new loss
+                </td>
+            </tr>
+            <tr>
+                <td>Team member 2</td>
+                <td>Designed and implemented attentional mechanism for approach, trying out different approaches such as
+                    dot product attention.
+                </td>
+            </tr>
+        </table>
+
+
+        <br><br>
+    </div>
+</div>
+
+
+</body>
+</html>
