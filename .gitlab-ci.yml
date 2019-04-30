@@ -59,7 +59,7 @@ style check:
   before_script:
     - pip install nbconvert
   script:
-    - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --template full --output index
+    - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
     - mkdir -p progress_checkin
     - mv webpages/progress_checkin/index.html progress_checkin/index.html
   artifacts:
@@ -76,7 +76,7 @@ final deliverables:
   before_script:
     - pip install nbconvert
   script:
-    - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --template full --output index
+    - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
     - mkdir -p project_webpage/project_webpage
     - mv webpages/project_webpage/index.html project_webpage/project_webpage/index.html
   artifacts:
@@ -93,7 +93,7 @@ pages:
   variables:
     GIT_LFS_SKIP_SMUDGE: "1"
   script:
-    - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --template full --output index
+    - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb  --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
     - jupyter nbconvert --to html webpages/progress_checkin/"Project Check-in".ipynb --template full --output index
     - mkdir public
     - mv webpages/project_webpage/index.html public/index.html
