@@ -1,7 +1,10 @@
 # Deep Learning
-Project for the [Deep Learning](https://www.cc.gatech.edu/classes/AY2019/cs7643_spring/#project) class
 
-**Public page:** [https://deepfrench.gitlab.io/deep-learning-project](https://deepfrench.gitlab.io/deep-learning-project)
+### Project for the [Deep Learning](https://www.cc.gatech.edu/classes/AY2019/cs7643_spring/#project) class
+
+**Public page:** [https://deepfrench.gitlab.io/deep-learning-project](https://deepfrench.gitlab.io/deep-learning-project) 
+</br>
+**Repo page:** [https://gitlab.com/DeepFrench/deep-learning-project](https://gitlab.com/DeepFrench/deep-learning-project)
 
 ## Training
 
@@ -34,7 +37,7 @@ You'll need to update `PROJECT_ID` and `BUCKET_ID`.
 The script will create a Docker container with the code, 
 push it to Google Cloud Container Registry, and submit a 
 training task on AI Platform to tune hyperparameters according 
-to the configuration file in `hptuning_config.yaml`.
+to the configuration file you select in `google_cloud_jobs/`.
 
 Documentation:
 
