@@ -76,8 +76,6 @@ checkin deliverables: # This is not needed anymore
 
 final deliverables:
   stage: package
-  variables:
-    GIT_LFS_SKIP_SMUDGE: "1"
   before_script:
     - pip install nbconvert
   script:
@@ -86,7 +84,9 @@ final deliverables:
     - jupyter nbconvert --to html gradescope_upload/webpages/project_webpage/presentation.ipynb --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
     - rm gradescope_upload/webpages/project_webpage/presentation.ipynb
     - mv gradescope_upload/webpages/project_webpage gradescope_upload/project_webpage
-    - rm -r webpages
+    - rm -r gradescope_upload/webpages
+    - mv gradescope_upload ${CI_PROJECT_DIR}/gradescope_upload
+    - cd ${CI_PROJECT_DIR}
   artifacts:
     name: "gradescope_upload"
     paths:
