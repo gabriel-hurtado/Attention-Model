@@ -82,7 +82,7 @@ final deliverables:
     - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
     - rm webpages/project_webpage/presentation.ipynb
     - mv webpages/project_webpage project_webpage
-    - rm -rf webpages poster .git .git*
+    - rm -rf webpages poster .idea .git .git*
   artifacts:
     name: "gradescope_upload"
     paths:
