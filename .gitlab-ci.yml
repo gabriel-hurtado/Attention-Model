@@ -94,6 +94,7 @@ final deliverables:
 pages:
   image: alpine:latest
   stage: deploy
+  before_script: []
   script:
     - mv gradescope_upload/project_webpage public
     - mv progress_checkin/index.html public/progress.html
