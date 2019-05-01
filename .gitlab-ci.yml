@@ -79,20 +79,17 @@ final deliverables:
   before_script:
     - pip install nbconvert
   script:
-    - cd ..
-    - mv ${CI_PROJECT_DIR} gradescope_upload
-    - jupyter nbconvert --to html gradescope_upload/webpages/project_webpage/presentation.ipynb --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
-    - rm gradescope_upload/webpages/project_webpage/presentation.ipynb
-    - mv gradescope_upload/webpages/project_webpage gradescope_upload/project_webpage
-    - rm -r gradescope_upload/webpages gradescope_upload/poster gradescope_upload/.git gradescope_upload/.git*
-    - mv gradescope_upload ${CI_PROJECT_DIR}/
-    - cd ${CI_PROJECT_DIR}
+    - jupyter nbconvert --to html webpages/project_webpage/presentation.ipynb --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
+    - rm webpages/project_webpage/presentation.ipynb
+    - mv webpages/project_webpage project_webpage
+    - rm -rf webpages poster .git .git*
   artifacts:
     name: "gradescope_upload"
     paths:
-      - gradescope_upload
+      - ${CI_PROJECT_DIR}
   only:
     - master
+    - final-deliverables
 
 pages:
   image: alpine:latest
