@@ -39,7 +39,7 @@ unit tests:
       - develop
 
 # pep8 runs different tests for different Python versions
-style check:
+.style check:
   stage: test
   variables:
     GIT_LFS_SKIP_SMUDGE: "1"
@@ -84,7 +84,7 @@ final deliverables:
     - jupyter nbconvert --to html gradescope_upload/webpages/project_webpage/presentation.ipynb --TagRemovePreprocessor.remove_cell_tags='{"remove_cell"}' --template full --output index
     - rm gradescope_upload/webpages/project_webpage/presentation.ipynb
     - mv gradescope_upload/webpages/project_webpage gradescope_upload/project_webpage
-    - rm -r gradescope_upload/webpages gradescope_upload/poster .git .git*
+    - rm -r gradescope_upload/webpages gradescope_upload/poster gradescope_upload/.git gradescope_upload/.git*
     - mv gradescope_upload ${CI_PROJECT_DIR}/
     - cd ${CI_PROJECT_DIR}
   artifacts:
