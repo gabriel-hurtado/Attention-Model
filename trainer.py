@@ -66,7 +66,7 @@ class Trainer(object):
          self.test_dataset_iterator, self.src_vocab, self.trg_vocab) = (
             IWSLTDatasetBuilder.build(
                 language_pair=LanguagePair.fr_en,
-                split=Split.Train | Split.Validation,
+                split=Split.Train | Split.Validation | Split.Test,
                 max_length=params["dataset"]["max_seq_length"],
                 min_freq=params["dataset"]["min_freq"],
                 start_token=params["dataset"]["start_token"],
