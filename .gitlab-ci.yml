@@ -39,7 +39,7 @@ unit tests:
       - develop
 
 # pep8 runs different tests for different Python versions
-style check:
+.style check:
   stage: test
   variables:
     GIT_LFS_SKIP_SMUDGE: "1"
