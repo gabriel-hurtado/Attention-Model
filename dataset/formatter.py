@@ -1,11 +1,8 @@
 from typing import Optional
 
-import numpy as np
 from torch import Tensor
 from torchtext.data import Batch, Dataset, Field
 
-from dataset.europarl import Europarl, Split
-from dataset.language_pairs import LanguagePair
 from transformer.utils import subsequent_mask
 
 
