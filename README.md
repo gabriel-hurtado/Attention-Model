@@ -9,7 +9,7 @@
 ## Training
 
 There are two ways to train the model: either use the training 
-script, or use Google Cloud ~~ML-Engine~~ AI Platform
+script, or use Google Cloud ~~ML-Engine~~ AI Platform.
 
 ### Downloading and running the training script
 
@@ -26,6 +26,8 @@ Then, just run the following:
 conda activate python3-dl
 python trainer.py
 ```
+
+Feel free to modify at your convenience the training configuration located in `trainer.py`.
 
 ### Training on Google Cloud AI Platform
 
