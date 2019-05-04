@@ -1,11 +1,8 @@
 from typing import Optional
 
-import numpy as np
 from torch import Tensor
 from torchtext.data import Batch, Dataset, Field
 
-from dataset.europarl import Europarl, Split
-from dataset.language_pairs import LanguagePair
 from transformer.utils import subsequent_mask
 
 
@@ -114,34 +111,3 @@ class BatchMasker(Batch):
         self.trg = self.trg.cuda()
         self.trg_mask = self.trg_mask.cuda()
         self.trg_shifted = self.trg_shifted.cuda()
-
-
-class Formater(Europarl):
-    def __init__(self, language: LanguagePair, split: Split, split_size=0.6, pad=0):
-        # call base constructor
-        super(Formater, self).__init__(language, split, split_size)
-        self.pad = pad
-
-    def __getitem__(self, index):
-        # call Europarl get item
-        source, target = super(Formater, self).__getitem__(index)
-        # tokenize the source and target
-        return [self.source_tokenizer(source), self.target_tokenizer(target)]
-
-    def collate_fn(self, batch):
-        # Get batch-wise max sequence length
-        max_seq_length = np.max([max(len(source), len(target)) for [source, target] in batch])
-
-        # Pad to the max sequence length
-        # TODO: Pad the entire batch once with np.pad() if size of pad is diff for each seq
-        padded = np.array([[np.pad(arr, (0, max_seq_length - len(arr)), mode='constant',
-                                   constant_values=self.pad)
-                            for arr in pair] for pair in batch])
-
-        source, target = padded[:, 0, :], padded[:, 1, :]
-        # TODO: FIXME
-        # return BatchWrapper(Tensor(source), Tensor(target), pad=self.pad)
-        raise NotImplementedError()
-
-    def __len__(self):
-        return len(self.indexes)

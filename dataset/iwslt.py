@@ -3,7 +3,7 @@ from typing import Iterable
 from torch.utils import data
 from torchtext import data, datasets
 
-from dataset.europarl import Split
+from dataset.utils import Split
 from dataset.formatter import BatchMasker
 from dataset.language_pairs import LanguagePair
 
